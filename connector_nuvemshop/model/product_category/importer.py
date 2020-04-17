@@ -3,56 +3,17 @@
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
 import logging
-import xmlrpclib
-from urlparse import urljoin
 
-from openerp import models, fields
 from openerp.addons.connector.queue.job import job
 from openerp.addons.connector.exception import MappingError
 from openerp.addons.connector.unit.mapper import (mapping,
                                                   ImportMapper
                                                   )
-from openerp.addons.connector.exception import IDMissingInBackend
-from ..unit.backend_adapter import (GenericAdapter)
-from ..unit.import_synchronizer import (DelayedBatchImporter, NuvemshopImporter)
-from ..connector import get_environment
-from ..backend import nuvemshop
+from ...unit.import_synchronizer import (DelayedBatchImporter, NuvemshopImporter)
+from ...connector import get_environment
+from ...backend import nuvemshop
 
 _logger = logging.getLogger(__name__)
-
-
-class NuvemshopProductCategory(models.Model):
-    _name = 'nuvemshop.product.category'
-    _inherit = 'nuvemshop.binding'
-    _inherits = {'product.category': 'openerp_id'}
-    _description = 'nuvemshop product category'
-
-    _rec_name = 'name'
-
-    openerp_id = fields.Many2one(comodel_name='product.category',
-                                 string='category',
-                                 required=True,
-                                 ondelete='cascade')
-    backend_id = fields.Many2one(
-        comodel_name='nuvemshop.backend',
-        string='Nuvemshop Backend',
-        store=True,
-        readonly=False,
-    )
-
-    slug = fields.Char('Slung Name')
-    nuvemshop_parent_id = fields.Many2one(
-        comodel_name='nuvemshop.product.category',
-        string='Nuvemshop Parent Category',
-        ondelete='cascade',)
-    description = fields.Char('Description')
-    count = fields.Integer('count')
-
-
-@nuvemshop
-class CategoryAdapter(GenericAdapter):
-    _model_name = 'nuvemshop.product.category'
-    _nuvemshop_model = 'categories'
 
 
 @nuvemshop
@@ -85,10 +46,6 @@ class ProductCategoryImportMapper(ImportMapper):
 @nuvemshop
 class CategoryBatchImporter(DelayedBatchImporter):
 
-    """ Import the NuvemshopCommerce Partners.
-
-    For every partner in the list, a delayed job is created.
-    """
     _model_name = ['nuvemshop.product.category']
 
     def _import_record(self, nuvemshop_id, priority=None):

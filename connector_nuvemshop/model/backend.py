@@ -9,7 +9,7 @@ from datetime import datetime
 
 from tiendanube.client import NubeClient
 
-from .product_category import category_import_batch
+from .product_category.importer import category_import_batch
 
 
 class NuvemShopBackend(models.Model):

@@ -2,19 +2,12 @@
 # Copyright (C) 2020  Luis Felipe Mileo - KMEE
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-import socket
 import logging
-import xmlrpclib
 from urlparse import urljoin
 
 from tiendanube.client import NubeClient
-
 from openerp.addons.connector.unit.backend_adapter import CRUDAdapter
-from openerp.addons.connector.exception import (NetworkRetryableError,
-                                                RetryableJobError)
-from openerp.tools.safe_eval import safe_eval
 
-from datetime import datetime
 _logger = logging.getLogger(__name__)
 
 recorder = {}
@@ -121,14 +114,20 @@ class NuvemshopCRUDAdapter(CRUDAdapter):
 
     def create(self, data):
         """ Create a record on the external system """
+        raise NotImplementedError
+
         return self.store[self._nuvemshop_model].add(data)
 
     def write(self, id, data):
         """ Update records on the external system """
+        raise NotImplementedError
+
         return self.store[self._nuvemshop_model].update(data)
 
     def delete(self, id):
         """ Delete a record on the external system """
+        raise NotImplementedError
+
         return self.store[self._nuvemshop_model].delete(id)
 
 GenericAdapter = NuvemshopCRUDAdapter
