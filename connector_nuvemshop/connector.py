@@ -3,11 +3,8 @@
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
 from openerp import models, fields
-from openerp.addons.connector.connector import (ConnectorEnvironment,
-                                                install_in_connector)
+from openerp.addons.connector.connector import (ConnectorEnvironment)
 from openerp.addons.connector.checkpoint import checkpoint
-
-install_in_connector()
 
 
 def get_environment(session, model_name, backend_id):
@@ -59,7 +56,7 @@ def add_checkpoint(session, model_name, record_id, backend_id):
     :type model_name: str
     :param record_id: ID of the record to be reviewed
     :type record_id: int
-    :param backend_id: ID of the WooCommerce Backend
+    :param backend_id: ID of the Nuvemshop Backend
     :type backend_id: int
     """
     return checkpoint.add_checkpoint(session, model_name, record_id,

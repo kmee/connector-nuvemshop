@@ -10,7 +10,13 @@
     'license': 'AGPL-3',
     'author': 'KMEE,Odoo Community Association (OCA)',
     'website': 'https://github.com/oca',
-    'depends': ['base', 'connector', 'connector_ecommerce'],
+    'depends': [
+        'base',
+        'connector',
+        'connector_ecommerce',
+        'product_m2mcategories',
+        'product_multi_image',
+    ],
     'data': [
         "views/backend_view.xml",
     ],

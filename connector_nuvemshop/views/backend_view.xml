@@ -37,6 +37,12 @@
 							<field name="access_token" required="1" />
 							<field name="version" required="1" />
 							<field name="default_lang_id" />
+							<field name="store_info" />
+						</group>
+						<group>
+							<label string="Import category" class="oe_inline" />
+							<button name="import_categories" type="object" class="oe_highlight"
+								string="Import in background" />
 						</group>
 					</sheet>
 				</form>
@@ -44,7 +50,7 @@
 		</record>
 
 		<record model="ir.actions.act_window" id="act_open_nuvemshop_backend_view">
-			<field name="name">Backend</field>
+			<field name="name">NuvemShop</field>
 			<field name="type">ir.actions.act_window</field>
 			<field name="res_model">nuvemshop.backend</field>
 			<field name="view_type">form</field>
