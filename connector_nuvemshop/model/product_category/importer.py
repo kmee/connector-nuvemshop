@@ -9,7 +9,7 @@ from openerp.addons.connector.exception import MappingError
 from openerp.addons.connector.unit.mapper import (mapping,
                                                   ImportMapper
                                                   )
-from ...unit.import_synchronizer import (DelayedBatchImporter, NuvemshopImporter)
+from ...unit.importer import (DelayedBatchImporter, NuvemshopImporter)
 from ...connector import get_environment
 from ...backend import nuvemshop
 
