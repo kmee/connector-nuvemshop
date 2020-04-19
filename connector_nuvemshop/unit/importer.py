@@ -331,6 +331,91 @@ class DelayedBatchImporter(BatchImporter):
                             record_id,
                             **kwargs)
 
+class TranslatableRecordImporter(NuvemshopImporter):
+    """ Import one translatable record """
+    _model_name = []
+
+    _translatable_fields = {}
+    _default_language = 'pt'
+
+    def __init__(self, environment):
+        """
+        :param environment: current environment (backend, session, ...)
+        :type environment: :py:class:`connector.connector.ConnectorEnvironment`
+        """
+        super(TranslatableRecordImporter, self).__init__(environment)
+        self.main_lang_data = None
+        self.main_lang = None
+        self.other_langs_data = None
+
+    def find_each_language(self, record):
+        languages = dict()
+        languages[self._default_language] = {}
+
+        # Get translated fields
+        for field in self._translatable_fields[self.connector_env.model_name]:
+            if isinstance(record[field], dict) and record[field].get(
+                    self._default_language) is not None:
+                languages[self._default_language][field] = \
+                    record[field].get(self._default_language)
+            else:
+                languages[self._default_language][field] = \
+                    record[field]
+
+        # Get no translated fields
+        for field in set(record.keys()) - set(
+                self._translatable_fields[self.connector_env.model_name]):
+            languages[self._default_language][field] = \
+                record[field]
+
+        return languages
+
+    def _create_context(self):
+        context = super(TranslatableRecordImporter, self)._create_context()
+        if self.main_lang:
+            context['lang'] = self.main_lang
+        return context
+
+    def _map_data(self):
+        """ Returns an instance of
+        :py:class:`~openerp.addons.connector.unit.mapper.MapRecord`
+
+        """
+        return self.mapper.map_record(self.main_lang_data)
+
+    def _import(self, binding, **kwargs):
+        """ Import the external record.
+
+        Can be inherited to modify for instance the session
+        (change current user, values in context, ...)
+
+        """
+        languages = self.find_each_language(self.nuvemshop_record)
+        if not languages:
+            raise FailedJobError(
+                _('No language mapping defined. '
+                  'Run "Synchronize base data".')
+            )
+
+        if self._default_language in languages:
+            self.main_lang_data = languages[self._default_language]
+            self.main_lang = self._default_language
+            del languages[self._default_language]
+        else:
+            raise NotImplementedError
+
+        self.other_langs_data = languages
+
+        super(TranslatableRecordImporter, self)._import(binding)
+
+    def _after_import(self, binding):
+        """ Hook called at the end of the import """
+        for lang_code, lang_record in self.other_langs_data.iteritems():
+            map_record = self.mapper.map_record(lang_record)
+            binding.with_context(
+                lang=lang_code,
+                connector_no_export=True,
+            ).write(map_record.values())
 
 DelayedBatchImport = DelayedBatchImporter
 
