@@ -38,7 +38,10 @@ class NuvemShopBinding(models.AbstractModel):
         required=True,
         ondelete='restrict',
     )
+    url = fields.Char(related='backend_id.url')
     nuvemshop_id = fields.Char(string='ID on NuvemShop')
+    created_at = fields.Datetime()
+    updated_at = fields.Datetime()
 
     _sql_constraints = [
         ('nuvemshop_uniq', 'unique(backend_id, nuvemshop_id)',

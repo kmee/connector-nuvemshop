@@ -20,6 +20,15 @@ _logger = logging.getLogger(__name__)
 class ProductCategoryImportMapper(ImportMapper):
     _model_name = 'nuvemshop.product.category'
 
+    direct = [
+        ('description', 'description'),
+        ('handle', 'handle'),
+        ('seo_title', 'seo_title'),
+        ('seo_description', 'seo_description'),
+        ('created_at', 'created_at'),
+        ('updated_at', 'updated_at'),
+    ]
+
     @mapping
     def name(self, record):
         if record['name']:

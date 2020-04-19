@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+        <menuitem
+                id="menu_nuvemshop"
+                parent="connector.menu_connector_root"
+                sequence="20"
+                name="NuvemShop"
+                groups="connector.group_connector_manager"/>
+    </data>
+</openerp>

@@ -9,33 +9,36 @@ from ...backend import nuvemshop
 
 _logger = logging.getLogger(__name__)
 
+class ProductCategory(models.Model):
+    _inherit = 'product.category'
+
+    nuvemshop_bind_ids = fields.One2many(
+        comodel_name='nuvemshop.product.category',
+        inverse_name='openerp_id',
+        string="Nuvemshop Bindings",
+    )
 
 class NuvemshopProductCategory(models.Model):
     _name = 'nuvemshop.product.category'
     _inherit = 'nuvemshop.binding'
     _inherits = {'product.category': 'openerp_id'}
     _description = 'nuvemshop product category'
-
     _rec_name = 'name'
 
     openerp_id = fields.Many2one(comodel_name='product.category',
                                  string='category',
                                  required=True,
                                  ondelete='cascade')
-    backend_id = fields.Many2one(
-        comodel_name='nuvemshop.backend',
-        string='Nuvemshop Backend',
-        store=True,
-        readonly=False,
-    )
 
-    slug = fields.Char('Slung Name')
     nuvemshop_parent_id = fields.Many2one(
         comodel_name='nuvemshop.product.category',
         string='Nuvemshop Parent Category',
         ondelete='cascade',)
-    description = fields.Char('Description')
-    count = fields.Integer('count')
+
+    description = fields.Char('Description', translate=True)
+    handle = fields.Char('Handle', translate=True)
+    seo_title = fields.Char('SEO Title', translate=True)
+    seo_description = fields.Char('SEO Description', translate=True)
 
 
 @nuvemshop

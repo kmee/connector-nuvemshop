@@ -18,7 +18,10 @@
         'product_multi_image',
     ],
     'data': [
+        "views/menus_view.xml",
+
         "views/backend_view.xml",
+        "views/product_category_view.xml",
     ],
     'demo': [
     ],

@@ -43,6 +43,22 @@ class NuvemShopBackend(models.Model):
              "Note that a similar configuration exists "
              "for each storeview.",
     )
+    company_id = fields.Many2one(
+        comodel_name='res.company',
+        index=True,
+        string='Company',
+    )
+    warehouse_id = fields.Many2one(
+        comodel_name='stock.warehouse',
+        string='Warehouse',
+        help='Warehouse used to compute the stock quantities.'
+    )
+    stock_location_id = fields.Many2one(
+        comodel_name='stock.location',
+        string='Stock Location',
+        help='Location used to import stock quantities.'
+    )
+    import_categories_since = fields.Datetime()
 
     @api.multi
     def test_connection(self):

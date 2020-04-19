@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+<data>
+
+    <record id="product_category_connector_nuvemshop_tree_view"
+            model="ir.ui.view">
+        <field name="model">nuvemshop.product.category</field>
+        <field name="arch" type="xml">
+            <tree string="nuvemshop Product Category" create="0">
+                <field name="backend_id" string="Backend"/>
+                <field name="nuvemshop_id"/>
+                <field name="created_at"/>
+                <field name="updated_at"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="product_category_connector_nuvemshop_form_view"
+            model="ir.ui.view">
+        <field name="name">nuvemshop.product.category.form.view</field>
+        <field name="model">nuvemshop.product.category</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="nuvemshop Product Category">
+                <group string="Primary Data">
+                    <field name="backend_id" string="Backend"/>
+                    <field name="nuvemshop_id"/>
+                    <field name="created_at"/>
+                    <field name="updated_at"/>
+                </group>
+                <group string="Descriptions">
+                    <field name="description"/>
+                    <field name="seo_title"/>
+                    <field name="seo_description"/>
+                </group>
+                <div>
+                    <field name="url" class="oe_inline"/>/<field name="handle" class="oe_inline"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="product_category_nuvemshop_binding_form_view"
+            model="ir.ui.view">
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='parent']/.." position="after">
+                <group string="Nuvemshop Binding">
+                    <field name="nuvemshop_bind_ids"
+                           nolabel="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</data>
+</openerp>
