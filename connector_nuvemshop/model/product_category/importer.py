@@ -6,10 +6,15 @@ import logging
 
 from openerp.addons.connector.queue.job import job
 from openerp.addons.connector.exception import MappingError
-from openerp.addons.connector.unit.mapper import (mapping,
-                                                  ImportMapper
-                                                  )
-from ...unit.importer import (DelayedBatchImporter, NuvemshopImporter)
+from openerp.addons.connector.unit.mapper import (
+    mapping,
+    ImportMapper
+)
+
+from ...unit.importer import (
+    DelayedBatchImporter,
+    NuvemshopImporter,
+    TranslatableRecordImporter)
 from ...connector import get_environment
 from ...backend import nuvemshop
 
@@ -32,7 +37,7 @@ class ProductCategoryImportMapper(ImportMapper):
     @mapping
     def name(self, record):
         if record['name']:
-            return {'name': record['name']['pt']}
+            return {'name': record['name']}
 
     @mapping
     def backend_id(self, record):
@@ -54,7 +59,6 @@ class ProductCategoryImportMapper(ImportMapper):
 
 @nuvemshop
 class CategoryBatchImporter(DelayedBatchImporter):
-
     _model_name = ['nuvemshop.product.category']
 
     def _import_record(self, nuvemshop_id, priority=None):
@@ -74,9 +78,19 @@ class CategoryBatchImporter(DelayedBatchImporter):
 
 
 @nuvemshop
-class ProductCategoryImporter(NuvemshopImporter):
+class ProductCategoryImporter(TranslatableRecordImporter):
     _model_name = ['nuvemshop.product.category']
     _parent_field = 'parent'
+
+    _translatable_fields = {
+        'nuvemshop.product.category': [
+            'name',
+            'description',
+            'handle',
+            'seo_title',
+            'seo_description',
+        ],
+    }
 
 
 @job(default_channel='root.nuvemshop')
