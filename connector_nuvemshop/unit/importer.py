@@ -3,14 +3,28 @@
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
 import logging
+from contextlib import closing, contextmanager
+
+import openerp
 from openerp import fields, _
 from openerp.addons.connector.queue.job import job, related_action
 from openerp.addons.connector.unit.synchronizer import Importer
 from openerp.addons.connector.exception import IDMissingInBackend
+from openerp.addons.connector.session import ConnectorSession
+from openerp.addons.connector.connector import ConnectorUnit, Binder
+from openerp.addons.connector.exception import (
+    RetryableJobError,
+    FailedJobError,
+)
+
 from ..connector import get_environment
 from ..related_action import link
 from datetime import datetime
 _logger = logging.getLogger(__name__)
+
+RETRY_ON_ADVISORY_LOCK = 1  # seconds
+RETRY_WHEN_CONCURRENT_DETECTED = 10  # seconds
+
 
 
 class NuvemshopImporter(Importer):
@@ -172,29 +186,82 @@ class NuvemshopImporter(Importer):
         """ Hook called at the end of the import """
         return
 
-    def run(self, nuvemshop_id, force=False):
+    @contextmanager
+    def do_in_new_connector_env(self, model_name=None):
+        """ Context manager that yields a new connector environment
+
+        Using a new Odoo Environment thus a new PG transaction.
+
+        This can be used to make a preemptive check in a new transaction,
+        for instance to see if another transaction already made the work.
+        """
+        with openerp.api.Environment.manage():
+            registry = openerp.modules.registry.RegistryManager.get(
+                self.env.cr.dbname
+            )
+            with closing(registry.cursor()) as cr:
+                try:
+                    new_env = openerp.api.Environment(cr, self.env.uid,
+                                                      self.env.context)
+                    new_connector_session = ConnectorSession.from_env(new_env)
+                    connector_env = self.connector_env.create_environment(
+                        self.backend_record.with_env(new_env),
+                        new_connector_session,
+                        model_name or self.model._name,
+                        connector_env=self.connector_env
+                    )
+                    yield connector_env
+                except Exception as e:
+                    cr.rollback()
+                    raise
+                else:
+                    # Despite what pylint says, this a perfectly valid
+                    # commit (in a new cursor). Disable the warning.
+                    cr.commit()  # pylint: disable=invalid-commit
+
+    def run(self, nuvemshop_id, **kwargs):
         """ Run the synchronization
 
         :param nuvemshop_id: identifier of the record on NuvemshopCommerce
         """
         self.nuvemshop_id = nuvemshop_id
+        lock_name = 'import({}, {}, {}, {})'.format(
+            self.backend_record._name,
+            self.backend_record.id,
+            self.model._name,
+            self.nuvemshop_id,
+        )
+        # Keep a lock on this import until the transaction is committed
+        self.advisory_lock_or_retry(lock_name, retry_seconds=RETRY_ON_ADVISORY_LOCK)
+
         try:
-            self.nuvemshop_record = self._get_nuvemshop_data()
+            if not self.nuvemshop_record:
+                self.nuvemshop_record = self._get_nuvemshop_data()
         except IDMissingInBackend:
             return _('Record does no longer exist in NuvemshopCommerce')
+
+        binding = self._get_binding()
+        if not binding:
+            with self.do_in_new_connector_env() as new_connector_env:
+                binder = new_connector_env.get_connector_unit(Binder)
+                if binder.to_openerp(self.nuvemshop_id):
+                    raise RetryableJobError(
+                        'Concurrent error. The job will be retried later',
+                        seconds=RETRY_WHEN_CONCURRENT_DETECTED,
+                        ignore_retry=True
+                    )
 
         skip = self._must_skip()
         if skip:
             return skip
 
-        binding = self._get_binding()
-        if not force and self._is_uptodate(binding):
+        if not kwargs.get('force') and self._is_uptodate(binding):
             return _('Already up-to-date.')
-        self._before_import()
 
-        # import the missing linked resources
         self._import_dependencies()
+        self._import(binding, **kwargs)
 
+    def _import(self, binding, **kwargs):
         map_record = self._map_data()
 
         if binding:
@@ -267,6 +334,13 @@ class DelayedBatchImporter(BatchImporter):
 
 DelayedBatchImport = DelayedBatchImporter
 
+@related_action(action=link)
+@job(default_channel='root.nuvemshop')
+def import_batch(session, model_name, backend_id, filters=None, **kwargs):
+    """ Prepare a batch import of records from Nuvemshop """
+    env = get_environment(session, model_name, backend_id)
+    importer = env.get_connector_unit(BatchImporter)
+    importer.run(filters=filters, **kwargs)
 
 @related_action(action=link)
 @job(default_channel='root.nuvemshop')
