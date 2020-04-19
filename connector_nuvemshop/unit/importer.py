@@ -275,9 +275,6 @@ class NuvemshopImporter(Importer):
         self._after_import(binding)
 
 
-NuvemshopImportSynchronizer = NuvemshopImporter
-
-
 class BatchImporter(Importer):
 
     """ The role of a BatchImporter is to search for a list of
@@ -299,9 +296,6 @@ class BatchImporter(Importer):
         raise NotImplementedError
 
 
-BatchImportSynchronizer = BatchImporter
-
-
 class DirectBatchImporter(BatchImporter):
 
     """ Import the records directly, without delaying the jobs. """
@@ -313,9 +307,6 @@ class DirectBatchImporter(BatchImporter):
                       self.model._name,
                       self.backend_record.id,
                       record_id)
-
-
-DirectBatchImport = DirectBatchImporter
 
 
 class DelayedBatchImporter(BatchImporter):
@@ -417,7 +408,6 @@ class TranslatableRecordImporter(NuvemshopImporter):
                 connector_no_export=True,
             ).write(map_record.values())
 
-DelayedBatchImport = DelayedBatchImporter
 
 @related_action(action=link)
 @job(default_channel='root.nuvemshop')
