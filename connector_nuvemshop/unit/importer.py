@@ -17,18 +17,18 @@ from openerp.addons.connector.exception import (
     FailedJobError,
 )
 
+from ..backend import nuvemshop
 from ..connector import get_environment
 from ..related_action import link
-from datetime import datetime
+from dateutil.parser.isoparser import isoparse
+
 _logger = logging.getLogger(__name__)
 
 RETRY_ON_ADVISORY_LOCK = 1  # seconds
-RETRY_WHEN_CONCURRENT_DETECTED = 10  # seconds
-
+RETRY_WHEN_CONCURRENT_DETECTED = 2  # seconds
 
 
 class NuvemshopImporter(Importer):
-
     """ Base importer for NuvemshopCommerce """
 
     _parent_field = False
@@ -53,8 +53,6 @@ class NuvemshopImporter(Importer):
     def _is_uptodate(self, binding):
         """Return True if the import should be skipped because
         it is already up-to-date in OpenERP"""
-        NUVEMSHOP_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
-        dt_fmt = NUVEMSHOP_DATETIME_FORMAT
         assert self.nuvemshop_record
         if not self.nuvemshop_record:
             return  # no update date on NuvemshopCommerce, always import it.
@@ -63,18 +61,14 @@ class NuvemshopImporter(Importer):
         sync = binding.sync_date
         if not sync:
             return
-        from_string = fields.Datetime.from_string
-        sync_date = from_string(sync)
-        self.nuvemshop_record['updated_at'] = {}
-        self.nuvemshop_record['updated_at'] = {'to': datetime.now().strftime(dt_fmt)}
-        nuvemshop_date = from_string(self.nuvemshop_record['updated_at']['to'])
-        # if the last synchronization date is greater than the last
-        # update in nuvemshop, we skip the import.
-        # Important: at the beginning of the exporters flows, we have to
-        # check if the nuvemshop_date is more recent than the sync_date
-        # and if so, schedule a new import. If we don't do that, we'll
-        # miss changes done in NuvemshopCommerce
-        return nuvemshop_date < sync_date
+
+        sync_date = fields.Datetime.from_string(sync)
+        if isoparse(self.nuvemshop_record['updated_at']).replace(tzinfo=None) < sync_date:
+            _logger.info('Already update: %s', self.nuvemshop_record)
+            return True
+        else:
+            _logger.info('To update: %s', self.nuvemshop_record)
+            return False
 
     def _import_dependency(self, nuvemshop_id, binding_model,
                            importer_class=None, always=False):
@@ -275,57 +269,9 @@ class NuvemshopImporter(Importer):
         self._after_import(binding)
 
 
-class BatchImporter(Importer):
-
-    """ The role of a BatchImporter is to search for a list of
-    items to import, then it can either import them directly or delay
-    the import of each item separately.
-    """
-
-    def run(self, filters=None):
-        """ Run the synchronization """
-        record_ids = self.backend_adapter.search(filters)
-        for record_id in record_ids:
-            self._import_record(record_id)
-
-    def _import_record(self, record_id):
-        """ Import a record directly or delay the import of the record.
-
-        Method to implement in sub-classes.
-        """
-        raise NotImplementedError
-
-
-class DirectBatchImporter(BatchImporter):
-
-    """ Import the records directly, without delaying the jobs. """
-    _model_name = None
-
-    def _import_record(self, record_id):
-        """ Import the record directly """
-        import_record(self.session,
-                      self.model._name,
-                      self.backend_record.id,
-                      record_id)
-
-
-class DelayedBatchImporter(BatchImporter):
-
-    """ Delay import of the records """
-    _model_name = None
-
-    def _import_record(self, record_id, **kwargs):
-        """ Delay the import of the records"""
-        import_record.delay(self.session,
-                            self.model._name,
-                            self.backend_record.id,
-                            record_id,
-                            **kwargs)
-
 class TranslatableRecordImporter(NuvemshopImporter):
     """ Import one translatable record """
     _model_name = []
-
     _translatable_fields = {}
     _default_language = 'pt'
 
@@ -355,7 +301,7 @@ class TranslatableRecordImporter(NuvemshopImporter):
 
         # Get no translated fields
         for field in set(record.keys()) - set(
-                self._translatable_fields[self.connector_env.model_name]):
+            self._translatable_fields[self.connector_env.model_name]):
             languages[self._default_language][field] = \
                 record[field]
 
@@ -409,13 +355,52 @@ class TranslatableRecordImporter(NuvemshopImporter):
             ).write(map_record.values())
 
 
-@related_action(action=link)
-@job(default_channel='root.nuvemshop')
-def import_batch(session, model_name, backend_id, filters=None, **kwargs):
-    """ Prepare a batch import of records from Nuvemshop """
-    env = get_environment(session, model_name, backend_id)
-    importer = env.get_connector_unit(BatchImporter)
-    importer.run(filters=filters, **kwargs)
+class BatchImporter(Importer):
+    """ The role of a BatchImporter is to search for a list of
+    items to import, then it can either import them directly or delay
+    the import of each item separately.
+    """
+
+    def run(self, filters=None):
+        """ Run the synchronization """
+        record_ids = self.backend_adapter.search(filters)
+        _logger.info('search for nuvemshop %s returned %s', filters, record_ids)
+        for record_id in record_ids:
+            self._import_record(record_id['id'])
+
+    def _import_record(self, record_id):
+        """ Import a record directly or delay the import of the record.
+
+        Method to implement in sub-classes.
+        """
+        raise NotImplementedError
+
+@nuvemshop
+class DirectBatchImporter(BatchImporter):
+    """ Import the records directly, without delaying the jobs. """
+    _model_name = None
+
+    def _import_record(self, record_id):
+        """ Import the record directly """
+        import_record(self.session,
+                      self.model._name,
+                      self.backend_record.id,
+                      record_id)
+
+
+@nuvemshop
+class DelayedBatchImporter(BatchImporter):
+    """ Delay import of the records """
+    _model_name = ['nuvemshop.product.category']
+
+    def _import_record(self, record_id, priority=None, **kwargs):
+        """ Delay the import of the records"""
+        import_record.delay(self.session,
+                            self.model._name,
+                            self.backend_record.id,
+                            record_id,
+                            **kwargs)
+
 
 @related_action(action=link)
 @job(default_channel='root.nuvemshop')
@@ -424,3 +409,17 @@ def import_record(session, model_name, backend_id, nuvemshop_id, force=False):
     env = get_environment(session, model_name, backend_id)
     importer = env.get_connector_unit(NuvemshopImporter)
     importer.run(nuvemshop_id, force=force)
+
+
+@job(default_channel='root.nuvemshop')
+def import_batch_delayed(session, model_name, backend_id, filters=None):
+    env = get_environment(session, model_name, backend_id)
+    importer = env.get_connector_unit(DelayedBatchImporter)
+    importer.run(filters=filters)
+
+
+@job(default_channel='root.nuvemshop')
+def import_batch_direct(session, model_name, backend_id, filters=None):
+    env = get_environment(session, model_name, backend_id)
+    importer = env.get_connector_unit(DirectBatchImporter)
+    importer.run(filters=filters)

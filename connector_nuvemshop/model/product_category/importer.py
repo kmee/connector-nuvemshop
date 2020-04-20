@@ -2,23 +2,14 @@
 # Copyright (C) 2020  Luis Felipe Mileo - KMEE
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-import logging
-
-from openerp.addons.connector.queue.job import job
 from openerp.addons.connector.exception import MappingError
 from openerp.addons.connector.unit.mapper import (
     mapping,
     ImportMapper
 )
 
-from ...unit.importer import (
-    DelayedBatchImporter,
-    NuvemshopImporter,
-    TranslatableRecordImporter)
-from ...connector import get_environment
+from ...unit.importer import TranslatableRecordImporter
 from ...backend import nuvemshop
-
-_logger = logging.getLogger(__name__)
 
 
 @nuvemshop
@@ -58,30 +49,9 @@ class ProductCategoryImportMapper(ImportMapper):
 
 
 @nuvemshop
-class CategoryBatchImporter(DelayedBatchImporter):
-    _model_name = ['nuvemshop.product.category']
-
-    def _import_record(self, nuvemshop_id, priority=None):
-        """ Delay a job for the import """
-
-        super(CategoryBatchImporter, self)._import_record(
-            nuvemshop_id, priority=priority)
-
-    def run(self, filters=None):
-        """ Category do not receive date paramerters =/
-         Then lets sync everything!"""
-        record_ids = self.backend_adapter.search()
-        _logger.info('search for nuvemshop Product Category %s returned %s',
-                     filters, record_ids)
-        for record_id in record_ids:
-            self._import_record(record_id['id'])
-
-
-@nuvemshop
 class ProductCategoryImporter(TranslatableRecordImporter):
     _model_name = ['nuvemshop.product.category']
     _parent_field = 'parent'
-
     _translatable_fields = {
         'nuvemshop.product.category': [
             'name',
@@ -91,11 +61,3 @@ class ProductCategoryImporter(TranslatableRecordImporter):
             'seo_description',
         ],
     }
-
-
-@job(default_channel='root.nuvemshop')
-def category_import_batch(session, model_name, backend_id, filters=None):
-    """ Prepare the import of category modified on NuvemshopCommerce """
-    env = get_environment(session, model_name, backend_id)
-    importer = env.get_connector_unit(CategoryBatchImporter)
-    importer.run(filters=filters)

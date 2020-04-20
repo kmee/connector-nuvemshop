@@ -9,7 +9,7 @@ from datetime import datetime
 
 from tiendanube.client import NubeClient
 
-from .product_category.importer import category_import_batch
+from ..unit.importer import import_batch_delayed
 
 
 class NuvemShopBackend(models.Model):
@@ -78,10 +78,10 @@ class NuvemShopBackend(models.Model):
         import_start_time = datetime.now()
         backend_id = self.id
         from_date = None
-        category_import_batch.delay(
+        import_batch_delayed.delay(
             session, 'nuvemshop.product.category', backend_id,
-            {'from_date': from_date,
-             'to_date': import_start_time}, priority=1)
+            {'updated_at_min': from_date,
+             'updated_at_max': import_start_time}, priority=1)
         return True
     @api.multi
     def import_categories(self):
