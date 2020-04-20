@@ -149,9 +149,6 @@ class NuvemshopImporter(Importer):
         """
         return
 
-    def _get_binding(self):
-        return self.binder.to_openerp(self.nuvemshop_id, browse=True)
-
     def _create_data(self, map_record, **kwargs):
         return map_record.values(for_create=True, **kwargs)
 
@@ -234,7 +231,7 @@ class NuvemshopImporter(Importer):
         except IDMissingInBackend:
             return _('Record does no longer exist in NuvemshopCommerce')
 
-        binding = self._get_binding()
+        binding = self.binder.to_openerp(self.nuvemshop_id)
         if not binding:
             with self.do_in_new_connector_env() as new_connector_env:
                 binder = new_connector_env.get_connector_unit(Binder)

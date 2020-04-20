@@ -45,7 +45,7 @@ class ProductCategoryImportMapper(ImportMapper):
             raise MappingError("The product category with "
                                "nuvemshop id %s is not imported." %
                                record['parent'])
-        return {'parent_id': category_id, 'nuvemshop_parent_id': nuvemshop_cat_id}
+        return {'parent_id': category_id.id, 'nuvemshop_parent_id': nuvemshop_cat_id.id}
 
 
 @nuvemshop
