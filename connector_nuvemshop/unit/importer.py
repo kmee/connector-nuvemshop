@@ -156,9 +156,9 @@ class NuvemshopImporter(Importer):
         """ Create the OpenERP record """
         # special check on data before import
         self._validate_data(data)
-        model = self.model.with_context(connector_no_export=True)
-        model = str(model).split('()')[0]
-        binding = self.env[model].create(data)
+        context = self.env.context.copy()
+        context['connector_no_export'] = True
+        binding = self.model.with_context(context).create(data)
         _logger.debug('%d created from nuvemshop %s', binding, self.nuvemshop_id)
         return binding
 
@@ -169,7 +169,9 @@ class NuvemshopImporter(Importer):
         """ Update an OpenERP record """
         # special check on data before import
         self._validate_data(data)
-        binding.with_context(connector_no_export=True).write(data)
+        context = self.env.context.copy()
+        context['connector_no_export'] = True
+        binding.with_context(context).write(data)
         _logger.debug('%d updated from nuvemshop %s', binding, self.nuvemshop_id)
         return
 

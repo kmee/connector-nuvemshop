@@ -61,3 +61,8 @@ class ProductCategoryImporter(TranslatableRecordImporter):
             'seo_description',
         ],
     }
+
+
+    def _is_uptodate(self, binding):
+        """ NuvemShop Category do not update update and create dates =/ """
+        return False
