@@ -114,14 +114,13 @@ class NuvemshopCRUDAdapter(CRUDAdapter):
 
     def create(self, data):
         """ Create a record on the external system """
-        raise NotImplementedError
-
         return self.store[self._nuvemshop_model].add(data)
 
     def write(self, id, data):
         """ Update records on the external system """
-        raise NotImplementedError
-
+        data['id'] = id
+        if not data.get('description'):
+            data['description'] = ' '
         return self.store[self._nuvemshop_model].update(data)
 
     def delete(self, id):
