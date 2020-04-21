@@ -2,7 +2,6 @@
 # Copyright (C) 2020  Luis Felipe Mileo - KMEE
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-import openerp
 from openerp.addons.connector.connector import Binder
 from ..backend import nuvemshop
 
@@ -30,10 +29,6 @@ class NuvemshopModelBinder(NuvemshopBinder):
     _sync_date_field = 'sync_date'
 
     _model_name = [
-        'nuvemshop.res.partner',
         'nuvemshop.product.category',
-        'nuvemshop.product.product',
-        'nuvemshop.sale.order',
-        'nuvemshop.sale.order.line',
     ]
 
