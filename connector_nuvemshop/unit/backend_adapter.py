@@ -125,8 +125,6 @@ class NuvemshopCRUDAdapter(CRUDAdapter):
 
     def delete(self, id):
         """ Delete a record on the external system """
-        raise NotImplementedError
-
-        return self.store[self._nuvemshop_model].delete(id)
+        return self.store[self._nuvemshop_model].delete({'id': id})
 
 GenericAdapter = NuvemshopCRUDAdapter
