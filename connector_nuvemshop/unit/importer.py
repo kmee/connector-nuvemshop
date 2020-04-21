@@ -407,14 +407,14 @@ def import_record(session, model_name, backend_id, nuvemshop_id, force=False):
     importer = env.get_connector_unit(NuvemshopImporter)
     importer.run(nuvemshop_id, force=force)
 
-
+@related_action(action=link)
 @job(default_channel='root.nuvemshop')
 def import_batch_delayed(session, model_name, backend_id, filters=None):
     env = get_environment(session, model_name, backend_id)
     importer = env.get_connector_unit(DelayedBatchImporter)
     importer.run(filters=filters)
 
-
+@related_action(action=link)
 @job(default_channel='root.nuvemshop')
 def import_batch_direct(session, model_name, backend_id, filters=None):
     env = get_environment(session, model_name, backend_id)

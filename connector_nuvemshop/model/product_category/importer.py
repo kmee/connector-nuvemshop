@@ -51,7 +51,7 @@ class ProductCategoryImportMapper(ImportMapper):
 @nuvemshop
 class ProductCategoryImporter(TranslatableRecordImporter):
     _model_name = ['nuvemshop.product.category']
-    _parent_field = 'parent'
+    _parent_field = 'parent' # não tenho certeza que precisa
     _translatable_fields = {
         'nuvemshop.product.category': [
             'name',

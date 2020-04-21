@@ -9,9 +9,7 @@ from openerp.addons.connector.unit.synchronizer import Exporter
 from .mapper import TranslationNuvemshopExportMapper
 from ..connector import get_environment
 
-
 _logger = logging.getLogger(__name__)
-
 
 # Exporters for Nuvemshop.
 # In addition to its export job, an exporter has to:
@@ -223,40 +221,3 @@ def delay_export_all_bindings(
     for binding in record.nuvemshop_bind_ids:
         export_record.delay(session, binding._model._name, binding.id,
                             fields=fields, priority=priority)
-
-#
-# def delay_unlink(session, model_name, record_id, priority=20):
-#     """ Delay a job which delete a record on Nuvemshop.
-#
-#     Called on binding records."""
-#     if session.context.get('connector_no_export'):
-#         return
-#     model = session.env[model_name]
-#     record = model.browse(record_id)
-#     env = get_environment(session, model_name, record.backend_id.id)
-#     binder = env.get_connector_unit(NuvemshopBinder)
-#     external_id = binder.to_backend(record_id)
-#     if external_id:
-#         export_delete_record.delay(session, model_name,
-#                                    record.backend_id.id, external_id,
-#                                    priority=priority)
-#
-#
-# def delay_unlink_all_bindings(session, model_name, record_id, priority=20):
-#     """ Delay a job which delete a record on Nuvemshop.
-#
-#     Called on binding records."""
-#     if session.context.get('connector_no_export'):
-#         return
-#     model = session.env[model_name]
-#     record = model.browse(record_id)
-#     for bind_record in record.nuvemshop_bind_ids:
-#         nuvemshop_model_name = bind_record._name
-#         env = get_environment(
-#             session, nuvemshop_model_name, bind_record.backend_id.id)
-#         binder = env.get_connector_unit(NuvemshopBinder)
-#         ext_id = binder.to_backend(bind_record.id)
-#         if ext_id:
-#             export_delete_record.delay(
-#                 session, nuvemshop_model_name,
-#                 bind_record.backend_id.id, ext_id, priority=priority)
