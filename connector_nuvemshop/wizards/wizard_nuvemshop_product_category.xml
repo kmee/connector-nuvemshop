@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2020 KMEE
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+
+<openerp>
+<data>
+
+    <record model="ir.ui.view" id="wizard_nuvemshop_product_category_form_view">
+        <field name="name">wizard.nuvemshop.product.category.form (in connector_nuvemshop)</field>
+        <field name="model">wizard.nuvemshop.product.category</field>
+        <field name="arch" type="xml">
+            <form string="Wizard Nuvemshop Product Category">
+                <!-- TODO -->
+                <group>
+                    <field name="backend_id"/>
+                </group>
+                <footer>
+                    <button name="doit"
+                            string="OK"
+                            class="oe_highlight"
+                            type="object"/>
+                    or
+                    <button string="Cancel"
+                            class="oe_link"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record model="ir.actions.act_window" id="wizard_nuvemshop_product_category_act_window">
+        <field name="name">Export Nuvemshop</field>
+        <field name="res_model">wizard.nuvemshop.product.category</field>
+        <field name="view_mode">form</field>
+        <field name="context">{}</field>
+        <field name="target">new</field>
+    </record>
+
+    <record model="ir.values" id="wizard_nuvemshop_product_category_act_multi">
+        <field name="name">Export Nuvemshop</field>
+        <field name="key2">client_action_multi</field>
+        <field name="value" eval="'ir.actions.act_window,' +str(ref('wizard_nuvemshop_product_category_act_window'))" />
+        <field name="model">product.category</field>
+    </record>
+
+</data>
+</openerp>

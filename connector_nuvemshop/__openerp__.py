@@ -18,6 +18,8 @@
         'product_multi_image',
     ],
     'data': [
+        'wizards/wizard_nuvemshop_product_category.xml',
+
         "views/menus_view.xml",
 
         "views/backend_view.xml",
