@@ -11,6 +11,11 @@ from tiendanube.client import NubeClient
 
 from ..unit.importer import import_batch_delayed
 
+LANG_NUVEMSHOP_ODOO = {
+    'en': 'en_US',
+    'pt': 'pt_BR',
+    'es': 'es_ES',
+}
 
 class NuvemShopBackend(models.Model):
 
@@ -43,6 +48,9 @@ class NuvemShopBackend(models.Model):
              "Note that a similar configuration exists "
              "for each storeview.",
     )
+    language_ids = fields.Many2many(
+        comodel_name='res.lang',
+    )
     company_id = fields.Many2one(
         comodel_name='res.company',
         index=True,
@@ -68,6 +76,13 @@ class NuvemShopBackend(models.Model):
             store_info = store.get_info()
             self.url = store_info.url_with_protocol
             self.store_info = store_info
+
+            for lang in store_info.languages.keys():
+                if store_info.languages[lang].active:
+                    self.language_ids |= self.language_ids.search(
+                        [('code', '=', LANG_NUVEMSHOP_ODOO[lang])], limit=1
+                    )
+
         except Exception as e:
             raise Warning(_('Error!!! \n {}'.format(e.message)))
 
@@ -83,6 +98,7 @@ class NuvemShopBackend(models.Model):
             {'updated_at_min': from_date,
              'updated_at_max': import_start_time}, priority=1)
         return True
+
     @api.multi
     def import_categories(self):
         """ Import Product categories """

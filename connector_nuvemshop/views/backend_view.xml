@@ -39,13 +39,14 @@
                             <field name="store_id" required="1"/>
                             <field name="access_token" required="1"/>
                             <field name="version" required="1"/>
-                            <field name="url" required="1"/>
+                            <field name="url"/>
                             </group>
                             <group>
                                 <field name="company_id"/>
-                                <field name="default_lang_id"/>
                                 <field name="warehouse_id"/>
                                 <field name="stock_location_id"/>
+                                <field name="default_lang_id"/>
+                                <field name="language_ids" widget="many2many_tags"/>
                             </group>
                                 <p class="oe_grey oe_inline">
                                     By clicking on the buttons,
