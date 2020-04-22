@@ -68,6 +68,7 @@ class NuvemShopBackend(models.Model):
     )
     import_categories_since = fields.Datetime()
     import_partners_since = fields.Datetime()
+    import_templates_since = fields.Datetime()
 
     @api.multi
     def test_connection(self):
@@ -125,4 +126,24 @@ class NuvemShopBackend(models.Model):
         """ Import Partners """
         for backend in self:
             backend.import_partner()
+        return True
+
+    @api.multi
+    def import_template(self):
+        session = ConnectorSession(self.env.cr, self.env.uid,
+                                   context=self.env.context)
+        import_start_time = datetime.now()
+        backend_id = self.id
+        from_date = None
+        import_batch_delayed.delay(
+            session, 'nuvemshop.product.template', backend_id,
+            {'updated_at_min': from_date,
+             'updated_at_max': import_start_time}, priority=1)
+        return True
+
+    @api.multi
+    def import_templates(self):
+        """ Import Templates """
+        for backend in self:
+            backend.import_template()
         return True
