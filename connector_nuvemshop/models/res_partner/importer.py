@@ -16,15 +16,54 @@ class ResPartnerImportMapper(ImportMapper):
     _model_name = 'nuvemshop.res.partner'
 
     direct = [
-        ('name', 'name'),
+        ('billing_name', 'name'),
+        ('name', 'legal_name'),
         ('email', 'email'),
-        ('cnpj_cpf', 'identification'),
+        ('identification', 'cnpj_cpf'),
+        ('billing_zipcode', 'zip'),
         ('phone', 'phone'),
-        ('street', 'billing_address'),
+        ('billing_address', 'street'),
+        ('billing_number', 'number'),
+        ('billing_floor', 'street2'),
+        ('billing_locality', 'district'),
         ('total_spent', 'total_spent'),
         ('total_spent_currency', 'total_spent_currency'),
         ('last_order_id', 'last_order_id'),
+        ('created_at', 'created_at'),
+        ('updated_at', 'updated_at'),
+        ('active', 'active'),
     ]
+
+    @mapping
+    def country_id(self, record):
+        if record['billing_country']:
+            country_id = self.env['res.country'].search(
+                [('code', '=', record['billing_country'])]
+            )
+            return {'country_id': country_id.id}
+
+    def get_state(self, state):
+        return self.env['res.country.state'].search(
+            [('name', '=', state)]
+        )
+
+    @mapping
+    def state_id(self, record):
+        if record['billing_province']:
+            state_id = self.get_state(record['billing_province'])
+            return {'state_id': state_id.id}
+
+    @mapping
+    def l10n_br_city_id(self, record):
+        if record['billing_city']:
+            state_id = self.get_state(record['billing_province'])
+            city_id = self.env['l10n_br_base.city'].search(
+                [
+                    ('name', '=', record['billing_city']),
+                    ('state_id', '=', state_id.id)
+                 ], limit=1
+            )
+            return {'l10n_br_city_id': city_id.id}
 
     @mapping
     def name(self, record):
