@@ -30,5 +30,6 @@ class NuvemshopModelBinder(NuvemshopBinder):
 
     _model_name = [
         'nuvemshop.product.category',
+        'nuvemshop.res.partner',
     ]
 

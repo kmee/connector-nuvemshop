@@ -67,6 +67,7 @@ class NuvemShopBackend(models.Model):
         help='Location used to import stock quantities.'
     )
     import_categories_since = fields.Datetime()
+    import_partners_since = fields.Datetime()
 
     @api.multi
     def test_connection(self):
@@ -106,3 +107,22 @@ class NuvemShopBackend(models.Model):
             backend.import_category()
         return True
 
+    @api.multi
+    def import_partner(self):
+        session = ConnectorSession(self.env.cr, self.env.uid,
+                                   context=self.env.context)
+        import_start_time = datetime.now()
+        backend_id = self.id
+        from_date = None
+        import_batch_delayed.delay(
+            session, 'nuvemshop.res.partner', backend_id,
+            {'updated_at_min': from_date,
+             'updated_at_max': import_start_time}, priority=1)
+        return True
+
+    @api.multi
+    def import_partners(self):
+        """ Import Partners """
+        for backend in self:
+            backend.import_partner()
+        return True

@@ -390,7 +390,10 @@ class DirectBatchImporter(BatchImporter):
 @nuvemshop
 class DelayedBatchImporter(BatchImporter):
     """ Delay import of the records """
-    _model_name = ['nuvemshop.product.category']
+    _model_name = [
+        'nuvemshop.product.category',
+        'nuvemshop.res.partner',
+    ]
 
     def _import_record(self, record_id, priority=None, **kwargs):
         """ Delay the import of the records"""
