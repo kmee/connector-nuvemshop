@@ -32,6 +32,7 @@ class ResPartnerImportMapper(ImportMapper):
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
         ('active', 'active'),
+        ('note', 'comment'),
     ]
 
     @mapping
@@ -64,11 +65,6 @@ class ResPartnerImportMapper(ImportMapper):
                  ], limit=1
             )
             return {'l10n_br_city_id': city_id.id}
-
-    @mapping
-    def name(self, record):
-        if record['name']:
-            return {'name': record['name']}
 
     @mapping
     def backend_id(self, record):
