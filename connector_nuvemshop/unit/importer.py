@@ -17,6 +17,7 @@ from openerp.addons.connector.exception import (
     FailedJobError,
 )
 
+from .constants import MODEL_NAMES
 from ..backend import nuvemshop
 from ..connector import get_environment
 from ..related_action import link
@@ -390,10 +391,7 @@ class DirectBatchImporter(BatchImporter):
 @nuvemshop
 class DelayedBatchImporter(BatchImporter):
     """ Delay import of the records """
-    _model_name = [
-        'nuvemshop.product.category',
-        'nuvemshop.res.partner',
-    ]
+    _model_name = MODEL_NAMES
 
     def _import_record(self, record_id, priority=None, **kwargs):
         """ Delay the import of the records"""

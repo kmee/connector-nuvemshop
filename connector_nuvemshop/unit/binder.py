@@ -4,6 +4,7 @@
 
 from openerp.addons.connector.connector import Binder
 from ..backend import nuvemshop
+from .constants import MODEL_NAMES
 
 
 class NuvemshopBinder(Binder):
@@ -28,8 +29,5 @@ class NuvemshopModelBinder(NuvemshopBinder):
     _openerp_field = 'openerp_id'
     _sync_date_field = 'sync_date'
 
-    _model_name = [
-        'nuvemshop.product.category',
-        'nuvemshop.res.partner',
-    ]
+    _model_name = MODEL_NAMES
 
