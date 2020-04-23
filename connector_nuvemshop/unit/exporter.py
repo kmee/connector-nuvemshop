@@ -92,7 +92,8 @@ class NuvemshopExporter(NuvemshopBaseExporter):
 
     def _create(self, data):
         """ Create the Nuvemshop record """
-        return self.backend_adapter.create(data)
+        nuvemshop_record = self.backend_adapter.create(data)
+        return nuvemshop_record.get('id', 0)
 
     def _update(self, data):
         """ Update an Nuvemshop record """
