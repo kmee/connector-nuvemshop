@@ -38,10 +38,5 @@ class ImageAdapter(GenericAdapter):
     _nuvemshop_model = 'product_image'
 
     def read(self, product_tmpl_id, image_id):
-        api = NuvemShopWebServiceImage(self.prestashop.api_url,
-                                        self.prestashop.webservice_key)
-        return api.get_image(
-            self._prestashop_image_model,
-            product_tmpl_id,
-            image_id
-        )
+        return self.store['products'].get(product_tmpl_id).images.get(image_id)
+

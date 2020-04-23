@@ -147,3 +147,28 @@ class NuvemShopBackend(models.Model):
         for backend in self:
             backend.import_template()
         return True
+
+    @api.multi
+    def import_image(self):
+        session = ConnectorSession(self.env.cr, self.env.uid,
+                                   context=self.env.context)
+        import_start_time = datetime.now()
+        backend_id = self.id
+        from_date = None
+        import_batch_delayed.delay(
+            session, 'nuvemshop.product.image', backend_id,
+            {'updated_at_min': from_date,
+             'updated_at_max': import_start_time}, priority=1)
+        return True
+
+    @api.multi
+    def import_images(self):
+        """ Import Images """
+        for backend in self:
+            products = self.env['nuvemshop.product.template'].search(
+                [('backend_id', '=', backend.id)]
+            ).mapped('openerp_id')
+            for product_id in products:
+                backend.import_image(product_id)
+        return True
+

@@ -25,6 +25,10 @@ class ProductImageImportMapper(ImportMapper):
     ]
 
     @mapping
+    def storage(self, record):
+        return {'storage': 'url'}
+
+    @mapping
     def owner_model(self, record):
         return {'owner_model': 'product.template'}
 
@@ -39,7 +43,12 @@ class ProductImageImportMapper(ImportMapper):
     @mapping
     def url(self, record):
         if record['src']:
-            return {'url': record['src'].replace('\\', '')}
+            url = record['src'].replace('\\', '')
+            return {'url': str(url)}
+
+    @mapping
+    def backend_id(self, record):
+        return {'backend_id': self.backend_record.id}
 
 
 @nuvemshop
@@ -56,8 +65,8 @@ class ProductImageImporter(NuvemshopImporter):
 
         try:
             super(ProductImageImporter, self).run(image_id)
-        except Exception:
-            pass
+        except Exception, e:
+            raise (e)
 
 
 @job(default_channel='root.nuvemshop')
@@ -65,5 +74,5 @@ def import_product_image(session, model_name, backend_id, product_tmpl_id,
                          image_id):
     """Import a product image"""
     env = get_environment(session, model_name, backend_id)
-    importer = env.get_connector_unit(NuvemshopImporter)
+    importer = env.get_connector_unit(ProductImageImporter)
     importer.run(product_tmpl_id, image_id)

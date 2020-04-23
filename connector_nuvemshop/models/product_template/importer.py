@@ -89,13 +89,13 @@ class ProductTemplateImporter(TranslatableRecordImporter):
     }
 
     def _after_import(self, binding):
-        super(ProductTemplateImportMapper, self)._after_import(binding)
+        super(ProductTemplateImporter, self)._after_import(binding)
         self.import_images(binding)
 
     def import_images(self, binding):
         nuvemshop_record = self._get_nuvemshop_data()
         images = nuvemshop_record.get('images', {})
-        for image in images:
+        for image in images.list():
             if image.get('id'):
                 import_product_image.delay(
                     self.session,
