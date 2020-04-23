@@ -16,7 +16,6 @@ class ResPartnerImportMapper(ImportMapper):
     _model_name = 'nuvemshop.res.partner'
 
     direct = [
-        ('billing_name', 'name'),
         ('name', 'legal_name'),
         ('email', 'email'),
         ('identification', 'cnpj_cpf'),
@@ -34,6 +33,13 @@ class ResPartnerImportMapper(ImportMapper):
         ('active', 'active'),
         ('note', 'comment'),
     ]
+
+    @mapping
+    def name(self, record):
+        if record['billing_name']:
+            return {'name': record['billing_name']}
+        else:
+            return {'name': record['name']}
 
     @mapping
     def country_id(self, record):
