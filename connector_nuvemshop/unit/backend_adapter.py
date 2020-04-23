@@ -66,6 +66,34 @@ class NuvemshopLocation(object):
         return self._location
 
 
+class NuvemShopWebServiceImage(object):
+
+    def __init__(self, _api_url, webservice_key):
+        self._api_url = _api_url
+        self.webservice_key = webservice_key
+
+    def get_image(self, resource, resource_id=None, image_id=None):
+        full_url = self._api_url + 'images/' + resource
+        if resource_id is not None:
+            full_url += "/%s" % (resource_id,)
+            if image_id is not None:
+                full_url += "/%s" % (image_id)
+        response = self._execute(full_url, 'GET')
+        if response.content:
+            image_content = base64.b64encode(response.content)
+        else:
+            image_content = ''
+
+        record = {
+            'type': response.headers['content-type'],
+            'content': image_content,
+            'id_' + resource[:-1]: resource_id,
+            'id_image': image_id,
+        }
+        record['full_public_url'] = self.get_image_public_url(record)
+        return record
+
+
 class NuvemshopCRUDAdapter(CRUDAdapter):
 
     """ External Records Adapter for nuvemshop """

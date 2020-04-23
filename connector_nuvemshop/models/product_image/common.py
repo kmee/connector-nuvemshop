@@ -4,7 +4,8 @@
 
 import logging
 from openerp import api, models, fields
-from ...unit.backend_adapter import GenericAdapter
+from ...unit.backend_adapter import (
+    GenericAdapter, NuvemShopWebServiceImage)
 from ...backend import nuvemshop
 
 _logger = logging.getLogger(__name__)
@@ -35,3 +36,12 @@ class NuvemshopProductImage(models.Model):
 class ImageAdapter(GenericAdapter):
     _model_name = 'nuvemshop.product.image'
     _nuvemshop_model = 'product_image'
+
+    def read(self, product_tmpl_id, image_id):
+        api = NuvemShopWebServiceImage(self.prestashop.api_url,
+                                        self.prestashop.webservice_key)
+        return api.get_image(
+            self._prestashop_image_model,
+            product_tmpl_id,
+            image_id
+        )
