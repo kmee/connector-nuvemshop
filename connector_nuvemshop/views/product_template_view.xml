@@ -40,7 +40,7 @@
                     <field name="seo_description"/>
                 </group>
                 <div>
-                    <field name="url" class="oe_inline"/>/<field name="handle" class="oe_inline"/>
+                    <field name="backend_url" class="oe_inline"/>/<field name="handle" class="oe_inline"/>
                 </div>
             </form>
         </field>
@@ -55,6 +55,7 @@
             <attribute name="invisible">0</attribute>
             </page>
                 <page name="connector" position="inside">
+                    <button name="import_image_nuvemshop" type="object" string="Import Image"/>
                     <group string="Nuvemshop Binding">
                         <field name="nuvemshop_bind_ids" nolabel="1"/>
                     </group>

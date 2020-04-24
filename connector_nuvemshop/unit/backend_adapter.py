@@ -66,6 +66,34 @@ class NuvemshopLocation(object):
         return self._location
 
 
+class NuvemShopWebServiceImage(object):
+
+    def __init__(self, _api_url, webservice_key):
+        self._api_url = _api_url
+        self.webservice_key = webservice_key
+
+    def get_image(self, resource, resource_id=None, image_id=None):
+        full_url = self._api_url + 'images/' + resource
+        if resource_id is not None:
+            full_url += "/%s" % (resource_id,)
+            if image_id is not None:
+                full_url += "/%s" % (image_id)
+        response = self._execute(full_url, 'GET')
+        if response.content:
+            image_content = base64.b64encode(response.content)
+        else:
+            image_content = ''
+
+        record = {
+            'type': response.headers['content-type'],
+            'content': image_content,
+            'id_' + resource[:-1]: resource_id,
+            'id_image': image_id,
+        }
+        record['full_public_url'] = self.get_image_public_url(record)
+        return record
+
+
 class NuvemshopCRUDAdapter(CRUDAdapter):
 
     """ External Records Adapter for nuvemshop """
@@ -101,11 +129,11 @@ class NuvemshopCRUDAdapter(CRUDAdapter):
     def search(self, filters=None):
         """ Search records according to some criterias
         and returns a list of ids """
-        return self.store[self._nuvemshop_model].list(fields=['id'], filters=filters)
+        raise NotImplementedError
 
-    def read(self, id, attributes=None):
+    def read(self, data, attributes=None):
         """ Returns the information of a record """
-        return self.store[self._nuvemshop_model].get(id)
+        raise NotImplementedError
 
     def search_read(self, filters=None):
         """ Search records according to some criterias
@@ -127,4 +155,17 @@ class NuvemshopCRUDAdapter(CRUDAdapter):
         """ Delete a record on the external system """
         return self.store[self._nuvemshop_model].delete({'id': id})
 
-GenericAdapter = NuvemshopCRUDAdapter
+
+class GenericAdapter(NuvemshopCRUDAdapter):
+
+    def search(self, filters=None):
+        """ Search records according to some criterias
+        and returns a list of ids """
+        return [
+            r.toDict().get('id') for r in
+            self.store[self._nuvemshop_model].list(fields=['id'], filters=filters)
+        ]
+
+    def read(self, data, attributes=None):
+        """ Returns the information of a record """
+        return self.store[self._nuvemshop_model].get(id=data)

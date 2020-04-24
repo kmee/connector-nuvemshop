@@ -39,7 +39,7 @@ class NuvemShopBackend(models.Model):
         string='Version'
     )
     store_info = fields.Text(readonly=True)
-    url = fields.Char(readonly=True)
+    backend_url = fields.Char(readonly=True)
     default_lang_id = fields.Many2one(
         comodel_name='res.lang',
         string='Default Language',
@@ -76,7 +76,7 @@ class NuvemShopBackend(models.Model):
         store = client.get_store(self.store_id)
         try:
             store_info = store.get_info()
-            self.url = store_info.url_with_protocol
+            self.backend_url = store_info.url_with_protocol
             self.store_info = store_info
 
             for lang in store_info.languages.keys():
@@ -147,3 +147,28 @@ class NuvemShopBackend(models.Model):
         for backend in self:
             backend.import_template()
         return True
+
+    @api.multi
+    def import_image(self):
+        session = ConnectorSession(self.env.cr, self.env.uid,
+                                   context=self.env.context)
+        import_start_time = datetime.now()
+        backend_id = self.id
+        from_date = None
+        import_batch_delayed.delay(
+            session, 'nuvemshop.product.image', backend_id,
+            {'updated_at_min': from_date,
+             'updated_at_max': import_start_time}, priority=1)
+        return True
+
+    @api.multi
+    def import_images(self):
+        """ Import Images """
+        for backend in self:
+            products = self.env['nuvemshop.product.template'].search(
+                [('backend_id', '=', backend.id)]
+            ).mapped('openerp_id')
+            for product_id in products:
+                backend.import_image(product_id)
+        return True
+

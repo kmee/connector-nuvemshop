@@ -87,6 +87,10 @@ class ProductTemplateImporter(TranslatableRecordImporter):
         ],
     }
 
+    def _after_import(self, binding):
+        super(ProductTemplateImporter, self)._after_import(binding)
+        binding.openerp_id.import_image_nuvemshop()
+
 
     # def _is_uptodate(self, binding):
     #     """ NuvemShop Category do not update update and create dates =/ """

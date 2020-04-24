@@ -11,7 +11,7 @@
                     <field name="name"/>
                     <field name="store_id"/>
                     <field name="version"/>
-                    <field name="url"/>
+                    <field name="backend_url"/>
                 </tree>
             </field>
         </record>
@@ -39,7 +39,7 @@
                             <field name="store_id" required="1"/>
                             <field name="access_token" required="1"/>
                             <field name="version" required="1"/>
-                            <field name="url"/>
+                            <field name="backend_url"/>
                             </group>
                             <group>
                                 <field name="company_id"/>

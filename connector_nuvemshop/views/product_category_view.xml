@@ -34,7 +34,7 @@
                     <field name="seo_description"/>
                 </group>
                 <div>
-                    <field name="url" class="oe_inline"/>/<field name="handle" class="oe_inline"/>
+                    <field name="backend_url" class="oe_inline"/>/<field name="handle" class="oe_inline"/>
                 </div>
             </form>
         </field>
