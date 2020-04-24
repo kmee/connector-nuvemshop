@@ -39,7 +39,7 @@ class NuvemShopBackend(models.Model):
         string='Version'
     )
     store_info = fields.Text(readonly=True)
-    url = fields.Char(readonly=True)
+    backend_url = fields.Char(readonly=True)
     default_lang_id = fields.Many2one(
         comodel_name='res.lang',
         string='Default Language',
@@ -76,7 +76,7 @@ class NuvemShopBackend(models.Model):
         store = client.get_store(self.store_id)
         try:
             store_info = store.get_info()
-            self.url = store_info.url_with_protocol
+            self.backend_url = store_info.url_with_protocol
             self.store_info = store_info
 
             for lang in store_info.languages.keys():
