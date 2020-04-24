@@ -131,9 +131,9 @@ class NuvemshopCRUDAdapter(CRUDAdapter):
         and returns a list of ids """
         return self.store[self._nuvemshop_model].list(fields=['id'], filters=filters)
 
-    def read(self, id, attributes=None):
+    def read(self, data, attributes=None):
         """ Returns the information of a record """
-        return self.store[self._nuvemshop_model].get(id)
+        return self.store[self._nuvemshop_model].get(id=data['id'])
 
     def search_read(self, filters=None):
         """ Search records according to some criterias

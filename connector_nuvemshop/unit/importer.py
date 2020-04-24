@@ -366,7 +366,7 @@ class BatchImporter(Importer):
         record_ids = self.backend_adapter.search(filters)
         _logger.info('search for nuvemshop %s returned %s', filters, record_ids)
         for record_id in record_ids:
-            self._import_record(record_id['id'])
+            self._import_record(record_id.toDict())
 
     def _import_record(self, record_id):
         """ Import a record directly or delay the import of the record.

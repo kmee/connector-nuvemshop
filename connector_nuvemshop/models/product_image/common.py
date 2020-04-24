@@ -35,8 +35,18 @@ class NuvemshopProductImage(models.Model):
 @nuvemshop
 class ImageAdapter(GenericAdapter):
     _model_name = 'nuvemshop.product.image'
-    _nuvemshop_model = 'product_image'
+    _nuvemshop_model = 'products'
 
-    def read(self, product_tmpl_id, image_id):
-        return self.store['products'].get(product_tmpl_id).images.get(image_id)
+    def search(self, filters):
+        if filters.get('product_id'):
+            images = self.store[self._nuvemshop_model].images.list(
+                filters.get('product_id'), fields='id,product_id')
+            return images
+        raise NotImplementedError
+
+    def read(self, data, attributes=None):
+        """ Returns the information of a record """
+        return self.store[self._nuvemshop_model].images.get(
+            resource_id=data['product_id'], id=data['id']
+        )
 

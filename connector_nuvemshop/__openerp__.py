@@ -27,6 +27,7 @@
 
         'views/res_partner_view.xml',
         "views/backend_view.xml",
+        "views/image_view.xml",
         "views/product_category_view.xml",
         "views/product_template_view.xml",
     ],

@@ -8,7 +8,6 @@ from openerp.addons.connector.unit.mapper import (
     ImportMapper
 )
 
-from ..product_image.importer import import_product_image
 from ...unit.importer import TranslatableRecordImporter
 from ...backend import nuvemshop
 
@@ -90,7 +89,7 @@ class ProductTemplateImporter(TranslatableRecordImporter):
 
     def _after_import(self, binding):
         super(ProductTemplateImporter, self)._after_import(binding)
-        self.import_images(binding)
+        # self.import_images(binding)
 
     def import_images(self, binding):
         nuvemshop_record = self._get_nuvemshop_data()

@@ -55,6 +55,7 @@
             <attribute name="invisible">0</attribute>
             </page>
                 <page name="connector" position="inside">
+                    <button name="import_image_nuvemshop" type="object" string="Import Image"/>
                     <group string="Nuvemshop Binding">
                         <field name="nuvemshop_bind_ids" nolabel="1"/>
                     </group>
