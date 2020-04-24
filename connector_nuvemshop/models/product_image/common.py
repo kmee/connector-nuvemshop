@@ -41,7 +41,7 @@ class ImageAdapter(GenericAdapter):
         if filters.get('product_id'):
             images = self.store[self._nuvemshop_model].images.list(
                 filters.get('product_id'), fields='id,product_id')
-            return images
+            return [img.toDict() for img in images]
         raise NotImplementedError
 
     def read(self, data, attributes=None):
@@ -49,4 +49,3 @@ class ImageAdapter(GenericAdapter):
         return self.store[self._nuvemshop_model].images.get(
             resource_id=data['product_id'], id=data['id']
         )
-
