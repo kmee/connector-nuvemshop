@@ -13,7 +13,7 @@ from ...backend import nuvemshop
 
 
 @nuvemshop
-class ProductCategoryImportMapper(ImportMapper):
+class SaleOrderImportMapper(ImportMapper):
     _model_name = 'nuvemshop.sale.order'
 
     direct = [
@@ -37,8 +37,8 @@ class ProductCategoryImportMapper(ImportMapper):
             return val
 
     @mapping
-    def partner_id(self, record):
-        lines = record.get('order_line', [])
+    def order_lines(self, record):
+        lines = record.get('products', [])
         order_lines = []
         for line in lines:
             product_id = self.binder_for(
@@ -46,6 +46,8 @@ class ProductCategoryImportMapper(ImportMapper):
                 line['product_id'], unwrap=True).id
             order_lines += [(0, 0, {
                 'product_id': product_id,
+                'qty': line.get('quantity'),
+                'price_unit': line.get('price'),
             })]
         return {'order_line': order_lines}
 
@@ -98,5 +100,5 @@ class ProductCategoryImportMapper(ImportMapper):
 
 
 @nuvemshop
-class ProductCategoryImporter(NuvemshopImporter):
+class SaleOrderImporter(NuvemshopImporter):
     _model_name = ['nuvemshop.sale.order']
