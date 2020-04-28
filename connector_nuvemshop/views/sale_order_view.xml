@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2020 KMEE
+     License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl). -->
+
+<openerp>
+<data>
+
+        <record id="view_partner_form" model="ir.ui.view">
+            <field name="name">sale.order.form</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form" />
+            <field name="arch" type="xml">
+                <page name="connector" position="attributes">
+                    <attribute name="invisible">0</attribute>
+                </page>
+                <page name="connector" position="inside">
+                    <group string="nuvemshop Bindings">
+                        <field name="nuvemshop_bind_ids"
+                               nolabel="1"/>
+                    </group>
+                </page>
+            </field>
+        </record>
+
+        <record id="view_nuvemshop_sale_order_form" model="ir.ui.view">
+            <field name="name">nuvemshop.sale.order.form</field>
+            <field name="model">nuvemshop.sale.order</field>
+            <field name="arch" type="xml">
+                <form string="nuvemshop Order" version="7.0">
+                    <group string="Primary Data">
+                        <field name="backend_id" string="Backend"/>
+                        <field name="nuvemshop_id"/>
+                        <field name="created_at"/>
+                        <field name="updated_at"/>
+                    </group>
+                    <group string="Descriptions">
+                        <group>
+                            <field name="token"/>
+                            <field name="store_id"/>
+                            <field name="shipping_min_days"/>
+                            <field name="shipping_max_days"/>
+                            <field name="billing_name"/>
+                            <field name="billing_phone"/>
+                            <field name="billing_address"/>
+                            <field name="billing_number"/>
+                            <field name="billing_floor"/>
+                            <field name="billing_locality"/>
+                            <field name="billing_zipcode"/>
+                            <field name="billing_city"/>
+                            <field name="billing_province"/>
+                            <field name="billing_country"/>
+                            <field name="shipping_cost_owner"/>
+                            <field name="subtotal"/>
+                            <field name="discount"/>
+                            <field name="discount_coupon"/>
+                            <field name="discount_gateway"/>
+                            <field name="total"/>
+                            <field name="total_usd"/>
+                            <field name="weight"/>
+                            <field name="currency"/>
+                            <field name="language"/>
+                            <field name="gateway"/>
+                        </group>
+                        <group>
+                            <field name="gateway_id"/>
+                            <field name="shipping"/>
+                            <field name="shipping_option"/>
+                            <field name="shipping_option_code"/>
+                            <field name="shipping_option_reference"/>
+                            <field name="shipping_pickup_details"/>
+                            <field name="shipping_tracking_number"/>
+                            <field name="shipping_tracking_url"/>
+                            <field name="shipping_store_branch_name"/>
+                            <field name="shipping_pickup_type"/>
+                            <field name="storefront"/>
+                            <field name="note"/>
+                            <field name="next_action"/>
+                            <field name="cancel_reason"/>
+                            <field name="owner_note"/>
+                            <field name="cancelled_at"/>
+                            <field name="closed_at"/>
+                            <field name="read_at"/>
+                            <field name="status"/>
+                            <field name="payment_status"/>
+                            <field name="shipping_status"/>
+                            <field name="shipped_at"/>
+                            <field name="paid_at"/>
+                            <field name="landing_url"/>
+                            <field name="app_id"/>
+                        </group>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_nuvemshop_sale_order_tree" model="ir.ui.view">
+            <field name="name">nuvemshop.sale.order.tree</field>
+            <field name="model">nuvemshop.sale.order</field>
+            <field name="arch" type="xml">
+                <tree string="nuvemshop Order" version="7.0">
+                    <field name="backend_id" string="Backend"/>
+                    <field name="nuvemshop_id"/>
+                    <field name="created_at"/>
+                    <field name="updated_at"/>
+                    <field name="status"/>
+                    <field name="payment_status"/>
+                    <field name="shipping_status"/>
+                </tree>
+            </field>
+        </record>
+
+</data>
+</openerp>

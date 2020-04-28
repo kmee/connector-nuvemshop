@@ -23,6 +23,53 @@ class SaleOrderImportMapper(ImportMapper):
         ('store_id', 'store_id'),
         ('shipping_min_days', 'shipping_min_days'),
         ('shipping_max_days', 'shipping_max_days'),
+        ('billing_name', 'billing_name'),
+        ('billing_phone', 'billing_phone'),
+        ('billing_address', 'billing_address'),
+        ('billing_number', 'billing_number'),
+        ('billing_floor', 'billing_floor'),
+        ('billing_locality', 'billing_locality'),
+        ('billing_zipcode', 'billing_zipcode'),
+        ('billing_city', 'billing_city'),
+        ('billing_province', 'billing_province'),
+        ('billing_country', 'billing_country'),
+        ('shipping_cost_owner', 'shipping_cost_owner'),
+        ('subtotal', 'subtotal'),
+        ('discount', 'discount'),
+        ('discount_coupon', 'discount_coupon'),
+        ('discount_gateway', 'discount_gateway'),
+        ('total', 'total'),
+        ('total_usd', 'total_usd'),
+        ('weight', 'weight'),
+        ('currency', 'currency'),
+        ('language', 'language'),
+        ('gateway', 'gateway'),
+        ('gateway_id', 'gateway_id'),
+        ('shipping', 'shipping'),
+        ('shipping_option', 'shipping_option'),
+        ('shipping_option_code', 'shipping_option_code'),
+        ('shipping_option_reference', 'shipping_option_reference'),
+        ('shipping_pickup_details', 'shipping_pickup_details'),
+        ('shipping_tracking_number', 'shipping_tracking_number'),
+        ('shipping_tracking_url', 'shipping_tracking_url'),
+        ('shipping_store_branch_name', 'shipping_store_branch_name'),
+        ('shipping_pickup_type', 'shipping_pickup_type'),
+        ('storefront', 'storefront'),
+        ('note', 'note'),
+        ('next_action', 'next_action'),
+        ('number', 'client_order_ref'),
+        ('cancel_reason', 'cancel_reason'),
+        ('owner_note', 'owner_note'),
+        ('cancelled_at', 'cancelled_at'),
+        ('closed_at', 'closed_at'),
+        ('read_at', 'read_at'),
+        ('status', 'status'),
+        ('payment_status', 'payment_status'),
+        ('shipping_status', 'shipping_status'),
+        ('shipped_at', 'shipped_at'),
+        ('paid_at', 'paid_at'),
+        ('landing_url', 'landing_url'),
+        ('app_id', 'app_id'),
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
     ]
@@ -90,7 +137,7 @@ class SaleOrderImportMapper(ImportMapper):
                 ('product_tmpl_id', '=', template_id)
             ])
             res = self.env['sale.order.line'].product_id_change(
-                pricelist=val['pricelist_id'],
+                pricelist=val.get('pricelist_id'),
                 product=product_id.id,
                 qty=float(line.get('quantity')),
                 uom=False,
@@ -108,8 +155,14 @@ class SaleOrderImportMapper(ImportMapper):
                 'price_unit': float(line.get('price')),
                 'freight_value': calc_price_ratio(
                     float(line.get('quantity')) * float(line.get('price')),
-                    float(record['shipping_cost_owner']),
-                    float(record['subtotal']),)
+                    float(record['shipping_cost_customer']),
+                    float(record['subtotal'])),
+                'discount': (
+                    float(record['discount']) +
+                    float(record['discount_coupon']) +
+                    float(record['discount_gateway'])) / float(
+                    record['subtotal']
+                ),
             })
             if res.get('tax_id'):
                 res['tax_id'] = [(6, 0, res['tax_id'].ids)]
@@ -119,46 +172,66 @@ class SaleOrderImportMapper(ImportMapper):
                 'fiscal_position': fiscal_position}
 
     @mapping
-    def shipping_cost_owner(self, record):
-        if record['shipping_cost_owner']:
-            return {
-                'shipping_cost_owner': float(record['shipping_cost_owner'])}
+    def account_payment_ids(self, record):
+        if record['payment_details'].get('method'):
+            if record['payment_details']['method'] == 'boleto':
+                account_payment_ids = [(0, 0, {
+                    'amount': record['total'],
+                    'payment_term_id':
+                        self.env['account.payment.term'].search([
+                            ('forma_pagamento', '=', '15'),
+                            ('name', '=', '15 Days'),
+                        ], limit=1).id
+                })]
+                return {
+                    'account_payment_ids': account_payment_ids}
 
     @mapping
-    def discount_coupon(self, record):
-        if record['discount_coupon']:
+    def date_order(self, record):
+        if record['completed_at'].get('date'):
             return {
-                'discount_coupon': float(record['discount_coupon'])}
+                'date_order': fields.Datetime.from_string(
+                    record['completed_at']['date'])}
 
     @mapping
-    def discount_gateway(self, record):
-        if record['discount_gateway']:
+    def payment_details_method(self, record):
+        if record['payment_details']:
+            payment_details_method = record['payment_details']['method']
+            payment_details_credit_card_company = \
+                record['payment_details']['credit_card_company']
+            payment_details_installments = \
+                record['payment_details']['installments']
             return {
-                'discount_gateway': float(record['discount_gateway'])}
+                'payment_details_method': payment_details_method,
+                'payment_details_credit_card_company':
+                    payment_details_credit_card_company,
+                'payment_details_installments': payment_details_installments,
+            }
 
     @mapping
-    def amount_freight(self, record):
-        if record['shipping_cost_customer']:
+    def client_details_browser_ip(self, record):
+        if record['client_details']:
+            client_details_browser_ip = record['client_details']['browser_ip']
+            client_details_user_agent = record['client_details']['user_agent']
             return {
-                'amount_freight': float(record['shipping_cost_owner'])}
+                'client_details_browser_ip': client_details_browser_ip,
+                'client_details_user_agent': client_details_user_agent,
+            }
 
     @mapping
-    def amount_untaxed(self, record):
-        if record['subtotal']:
+    def discount_rate(self, record):
+        if record['promotional_discount'].get('id'):
             return {
-                'amount_untaxed': float(record['subtotal'])}
+                'discount_rate': (
+                    float(record['discount']) +
+                    float(record['discount_coupon']) +
+                    float(record['discount_gateway'])) / float(
+                    record['subtotal']
+                )}
 
     @mapping
-    def amount_discount(self, record):
-        if record['discount']:
-            return {
-                'amount_discount': float(record['discount'])}
-
-    @mapping
-    def amount_total(self, record):
-        if record['total']:
-            return {
-                'amount_total': float(record['total'])}
+    def ind_pres(self, record):
+        return {'ind_pres': '2'}
 
     @mapping
     def backend_id(self, record):
