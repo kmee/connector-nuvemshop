@@ -33,6 +33,10 @@ class ProductImageImportMapper(ImportMapper):
         return {'owner_model': 'product.template'}
 
     @mapping
+    def sequence(self, record):
+        return {'sequence': record.get('position')}
+
+    @mapping
     def owner_id(self, record):
         if record['product_id']:
             product_id = self.binder_for(

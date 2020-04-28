@@ -22,6 +22,7 @@
         # 'security/nuvemshop_res_partner.xml',
 
         'wizards/wizard_nuvemshop_product_category.xml',
+        'wizards/wizard_nuvemshop_product_template.xml',
 
         "views/menus_view.xml",
 
