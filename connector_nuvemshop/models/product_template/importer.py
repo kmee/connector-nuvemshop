@@ -11,6 +11,9 @@ from openerp.addons.connector.unit.mapper import (
 from ...unit.importer import TranslatableRecordImporter
 from ...backend import nuvemshop
 
+from ...unit.importer import import_batch_delayed
+from openerp.addons.connector.session import ConnectorSession
+
 
 @nuvemshop
 class ProductTemplateImportMapper(ImportMapper):
@@ -27,6 +30,27 @@ class ProductTemplateImportMapper(ImportMapper):
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
     ]
+
+    @mapping
+    def attributes(self, record):
+        attributes = []
+        prod_attrib = self.env['product.attribute']
+        if record.get('attributes'):
+            for attribute in record.get('attributes'):
+                attrib = prod_attrib.search([('name', '=', attribute)])
+                if attrib:
+                    attributes.append(attrib.id)
+                else:
+                    new_attr = prod_attrib.create({'name': attribute})
+                    attributes.append(new_attr.id)
+
+            attrib_lines = [
+                (0, 0, {'attribute_id': attrib})
+                for attrib in attributes
+            ]
+
+            return {'attribute_line_ids': attrib_lines}
+
 
     @mapping
     def product_type(self, record):
@@ -84,12 +108,14 @@ class ProductTemplateImporter(TranslatableRecordImporter):
             'handle',
             'seo_title',
             'seo_description',
+            'attributes'
         ],
     }
 
     def _after_import(self, binding):
         super(ProductTemplateImporter, self)._after_import(binding)
         binding.openerp_id.import_image_nuvemshop()
+        binding.openerp_id.import_variant_nuvemshop()
 
 
     # def _is_uptodate(self, binding):

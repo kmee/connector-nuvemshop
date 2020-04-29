@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+<data>
+
+    <record id="product_product_connector_nuvemshop_tree_view"
+            model="ir.ui.view">
+        <field name="model">nuvemshop.product.product</field>
+        <field name="arch" type="xml">
+            <tree string="nuvemshop Product product" create="0">
+                <field name="backend_id" string="Backend"/>
+                <field name="nuvemshop_id"/>
+                <field name="created_at"/>
+                <field name="updated_at"/>
+                <field name="values"/>
+                <field name="position"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="product_product_connector_nuvemshop_form_view"
+            model="ir.ui.view">
+        <field name="name">nuvemshop.product.product.form.view</field>
+        <field name="model">nuvemshop.product.product</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="nuvemshop Product product">
+                <group string="Primary Data">
+                    <field name="backend_id" string="Backend"/>
+                    <field name="image_id"/>
+                    <field name="position"/>
+                    <field name="promotional_price"/>
+                    <field name="stock_management"/>
+                    <field name="weight"/>
+                    <field name="width"/>
+                    <field name="height"/>
+                    <field name="depth"/>
+                    <field name="values"/>
+                    <field name="created_at"/>
+                    <field name="updated_at"/>
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <record id="product_product_nuvemshop_binding_form_view"
+            model="ir.ui.view">
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="connector_base_product.product_normal_form_view"/>
+        <field name="arch" type="xml">
+            <page name="connector" position="attributes">
+            <attribute name="invisible">0</attribute>
+            </page>
+                <page name="connector" position="inside">
+                    <group string="Nuvemshop Variant Binding">
+                        <field name="nuvemshop_variants_bind_ids" nolabel="1"/>
+                    </group>
+                </page>
+        </field>
+    </record>
+
+</data>
+</openerp>
