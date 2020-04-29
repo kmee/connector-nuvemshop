@@ -86,6 +86,7 @@ class NuvemshopProductTemplate(models.Model):
     description_html = fields.Html('HTML Description', translate=True)
     seo_title = fields.Char('SEO Title', translate=True)
     seo_description = fields.Char('SEO Description', translate=True)
+    published = fields.Boolean('Remote available', default=True)
 
     @api.onchange('name')
     def _onchange_name(self):

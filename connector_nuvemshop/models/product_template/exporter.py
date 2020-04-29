@@ -31,6 +31,7 @@ TEMPLATE_EXPORT_FIELDS = [
     'tags',
     'images',
     'categories',
+    'remote_available',
 ]
 
 @on_record_create(model_names='nuvemshop.product.template')
@@ -72,6 +73,7 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
         ('seo_title', 'seo_title'),
         ('seo_description', 'seo_description'),
         ('brand', 'brand'),
+        ('published', 'published'),
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
         # ('variants', 'variants'),
@@ -89,20 +91,6 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
             return{'description': record.description}
 
     @mapping
-    def images(self, record):
-        images = []
-        for image in record.image_ids:
-            if image.url:
-                images.append(
-                    {
-                        'src': image.url,
-                        'name': image.name,
-                        'position': image.sequence
-                    }
-                )
-        return {'images': images}
-
-    @mapping
     def categories(self, record):
         ext_categ_ids = []
         binder = self.binder_for('nuvemshop.product.category')
@@ -114,24 +102,6 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
             # TODO: exportar a categoria para ser vinculada
 
         return {'categories': ext_categ_ids}
-
-    @mapping
-    def variants(self, record):
-        if record.product_variant_count == 1:
-            return {
-            "variants": [
-                {
-                    "price": str(record.lst_price),
-                    "weight": str(record.weight),
-                    "sku": record.default_code,
-                    "barcode": record.ean13,
-                    # TODO: Controle de estoque
-                    # "stock_management": True,
-                    # "stock": 12,
-                }
-            ]
-        }
-        #TODO: fazer importaçao para cada variant
 
     _translatable_fields = {
         'nuvemshop.product.template': [

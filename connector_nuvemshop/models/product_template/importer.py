@@ -26,6 +26,7 @@ class ProductTemplateImportMapper(ImportMapper):
         ('canonical_url', 'canonical_url'),
         ('brand', 'brand'),
         ('seo_title', 'seo_title'),
+        ('published', 'published'),
         ('seo_description', 'seo_description'),
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
