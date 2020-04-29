@@ -29,8 +29,12 @@ class ProductProduct(models.Model):
         for record in self:
             for bind in record.nuvemshop_variants_bind_ids:
                 if bind.image_id:
-                    record.nuvemshop_bind_ids.mapped('image_ids').mapped(
-                        'nuvemshop_bind_ids').filtered(lambda x: bind.image_id in x.nuvemshop_id)
+                    image_record = record.nuvemshop_bind_ids.mapped(
+                        'image_ids').mapped('nuvemshop_bind_ids').filtered(
+                        lambda x: str(bind.image_id) in x.nuvemshop_id
+                    )
+                    image_record.product_variant_ids += record
+                    image_record.sequence = 0
         return
 
     # @api.multi
