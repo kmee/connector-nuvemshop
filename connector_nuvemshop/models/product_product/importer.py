@@ -36,14 +36,6 @@ class ProductProductImportMapper(ImportMapper):
     ]
 
     @mapping
-    def image_id(self, record):
-        if record['image_id']:
-            image = self.binder_for('nuvemshop.product.image').to_openerp(
-                record['image_id'], unwrap=True).variant_ids = self.id
-
-
-
-    @mapping
     def values(self, record):
         if record['values']:
             pav = self.env['product.attribute.value']
@@ -95,7 +87,7 @@ class ProductProductImporter(TranslatableRecordImporter):
 
     def _after_import(self, binding):
         super(ProductProductImporter, self)._after_import(binding)
-        # binding.openerp_id.import_image_nuvemshop()
+        binding.openerp_id.import_variant_image_nuvemshop()
 
     # def _import_dependencies(self):
     #     record = self.nuvemshop_record

@@ -16,6 +16,23 @@ _logger = logging.getLogger(__name__)
 class ProductProduct(models.Model):
     _inherit = 'product.product'
 
+    nuvemshop_variants_bind_ids = fields.One2many(
+        comodel_name='nuvemshop.product.product',
+        inverse_name='openerp_id',
+        string="Nuvemshop Variants Bindings",
+    )
+
+    @api.multi
+    def import_variant_image_nuvemshop(self):
+        session = ConnectorSession(self.env.cr, self.env.uid,
+                                   context=self.env.context)
+        for record in self:
+            for bind in record.nuvemshop_variants_bind_ids:
+                if bind.image_id:
+                    record.nuvemshop_bind_ids.mapped('image_ids').mapped(
+                        'nuvemshop_bind_ids').filtered(lambda x: bind.image_id in x.nuvemshop_id)
+        return
+
     # @api.multi
     # def import_attributes_value_nuvemshop(self):
     #     session = ConnectorSession(self.env.cr, self.env.uid,
@@ -35,11 +52,19 @@ class ProductProduct(models.Model):
     #     copy=False,
     #     string="Nuvemshop Bindings",
     # )
-    nuvemshop_variants_bind_ids = fields.One2many(
-        comodel_name='nuvemshop.product.product',
-        inverse_name='openerp_id',
-        string="Nuvemshop Variants Bindings",
-    )
+
+
+class NuvemshopProductProduct(models.Model):
+    _name = 'nuvemshop.product.product'
+    _inherit = ['nuvemshop.binding', 'nuvemshop.handle.abstract']
+    _inherits = {'product.product': 'openerp_id'}
+    _description = 'nuvemshop product product'
+    _rec_name = 'name'
+
+    openerp_id = fields.Many2one(comodel_name='product.product',
+                                 string='product',
+                                 required=True,
+                                 ondelete='cascade')
 
     image_id = fields.Integer(
         string="Image"
@@ -72,19 +97,6 @@ class ProductProduct(models.Model):
     values = fields.Char(
         string="Values"
     )
-
-
-class NuvemshopProductProduct(models.Model):
-    _name = 'nuvemshop.product.product'
-    _inherit = ['nuvemshop.binding', 'nuvemshop.handle.abstract']
-    _inherits = {'product.product': 'openerp_id'}
-    _description = 'nuvemshop product product'
-    _rec_name = 'name'
-
-    openerp_id = fields.Many2one(comodel_name='product.product',
-                                 string='product',
-                                 required=True,
-                                 ondelete='cascade')
 
     # nuvemshop_parent_id = fields.Many2one(
     #     comodel_name='nuvemshop.product.template',
