@@ -12,9 +12,22 @@ from ...unit.importer import import_batch_delayed
 
 _logger = logging.getLogger(__name__)
 
-# TODO: Verificars se e necessario essa adiçao visto que ja e herdada do product.template
+
 class ProductProduct(models.Model):
     _inherit = 'product.product'
+
+    # @api.multi
+    # def import_attributes_value_nuvemshop(self):
+    #     session = ConnectorSession(self.env.cr, self.env.uid,
+    #                                context=self.env.context)
+    #     for record in self:
+    #         for bind in record.nuvemshop_bind_ids:
+    #             import_batch_delayed(
+    #                 session,
+    #                 'nuvemshop.product.attribute.value',
+    #                 bind.backend_id.id,
+    #                 {'product_id': bind.nuvemshop_id}
+    #             )
 
     # nuvemshop_bind_ids = fields.One2many(
     #     comodel_name='nuvemshop.product.product',
@@ -102,7 +115,7 @@ class ProductProductAdapter(GenericAdapter):
         if filters.get('product_id'):
             variants = self.store[self._nuvemshop_model].variants.list(
                 filters.get('product_id'), fields='id,product_id')
-            return [img.toDict() for img in variants]
+            return [var.toDict() for var in variants]
         raise NotImplementedError
 
     def read(self, data, attributes=None):
@@ -110,3 +123,77 @@ class ProductProductAdapter(GenericAdapter):
         return self.store[self._nuvemshop_model].variants.get(
             resource_id=data['product_id'], id=data['id']
         )
+
+#
+# class ProductAttribute(models.Model):
+#     _inherit = 'product.attribute'
+#
+#     nuvemshop_bind_ids = fields.One2many(
+#         comodel_name='nuvemshop.product.attribute',
+#         inverse_name='openerp_id',
+#         string='Nuvemshop Bindings (attribute)',
+#     )
+#
+#
+# class NuvemshopProductAttribute(models.Model):
+#     _name = 'nuvemshop.product.attribute'
+#     _inherit = ['nuvemshop.binding', 'nuvemshop.handle.abstract']
+#     _inherits = {'product.attribute': 'openerp_id'}
+#
+#     openerp_id = fields.Many2one(
+#         comodel_name='product.attribute',
+#         string='Attribute',
+#         required=True,
+#         ondelete='cascade',
+#     )
+#
+#
+# @nuvemshop
+# class ProductAttributeAdapter(GenericAdapter):
+#     _model_name = 'nuvemshop.product.attribute'
+#     _nuvemshop_model = 'products'
+#
+#     def search(self, filters):
+#         if filters.get('product_id'):
+#             attributes = self.store[self._nuvemshop_model].list(
+#                 fields=['attributes'], filters=filters)
+#             return [attrib.toDict() for attrib in attributes]
+#         raise NotImplementedError
+#
+#     def read(self, data, attributes=None):
+#         """ Returns the information of a record """
+#         return self.store[self._nuvemshop_model].get(
+#             resource_id=data['product_id'], attribute=data['name']
+#         )
+#
+#
+# class ProductAttributeValue(models.Model):
+#     _inherit = 'product.attribute.value'
+#
+#     nuvemshop_bind_ids = fields.One2many(
+#         comodel_name='nuvemshop.product.attribute.value',
+#         inverse_name='openerp_id',
+#         string='Nuvemshop Bindings',
+#     )
+#
+#
+# class NuvemshopProductAttributeValue(models.Model):
+#     _name = 'nuvemshop.product.attribute.value'
+#     _inherit = ['nuvemshop.binding', 'nuvemshop.handle.abstract']
+#     _inherits = {'product.attribute.value': 'openerp_id'}
+#
+#     openerp_id = fields.Many2one(
+#         comodel_name='product.attribute.value',
+#         string='Attribute',
+#         required=True,
+#         ondelete='cascade',
+#     )
+#
+#     id_attribute_group = fields.Many2one(
+#         comodel_name='nuvemshop.product.attribute')
+#
+#
+# @nuvemshop
+# class ProductAttributeValueAdapter(GenericAdapter):
+#     _model_name = 'nuvemshop.product.attribute.value'
+#     _nuvemshop_model = 'products'

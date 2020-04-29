@@ -47,6 +47,19 @@ class ProductTemplate(models.Model):
                     {'product_id': bind.nuvemshop_id}
                 )
 
+    # @api.multi
+    # def import_attribute_nuvemshop(self):
+    #     session = ConnectorSession(self.env.cr, self.env.uid,
+    #                                context=self.env.context)
+    #     for record in self:
+    #         for bind in record.nuvemshop_bind_ids:
+    #             import_batch_delayed(
+    #                 session,
+    #                 'nuvemshop.product.attribute',
+    #                 bind.backend_id.id,
+    #                 {'product_id': bind.nuvemshop_id}
+    #             )
+    #
 
 class NuvemshopProductTemplate(models.Model):
     _name = 'nuvemshop.product.template'

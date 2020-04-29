@@ -35,21 +35,38 @@ class ProductTemplateImportMapper(ImportMapper):
     def attributes(self, record):
         attributes = []
         prod_attrib = self.env['product.attribute']
-        if record.get('attributes'):
-            for attribute in record.get('attributes'):
-                attrib = prod_attrib.search([('name', '=', attribute)])
+        prod_attrib_v = self.env['product.attribute.value']
+        if record.get('attributes') and record.get('variants'):
+            for idx, attribute in enumerate(record.get('attributes')):
+                record_line = {
+                    "attribute_id": False,
+                    "value_ids": [(6,0,[])]
+                }
+                attrib = prod_attrib.search([('name', '=', attribute.get('pt'))])
                 if attrib:
-                    attributes.append(attrib.id)
+                    record_line.update({'attribute_id': attrib.id})
                 else:
-                    new_attr = prod_attrib.create({'name': attribute})
-                    attributes.append(new_attr.id)
+                    new_attr = prod_attrib.create({'name': attribute.get('pt')})
+                    record_line.update({'attribute_id': new_attr.id})
 
-            attrib_lines = [
-                (0, 0, {'attribute_id': attrib})
-                for attrib in attributes
-            ]
+                for variant in record.get('variants'):
+                    attrib = record_line.get('attribute_id')
+                    value = prod_attrib_v.search([
+                        ('name', '=', variant.get('values')[idx].get('pt')),
+                        ('attribute_id', '=', attrib),
+                    ])
+                    if value:
+                        record_line.get('value_ids')[0][2].append(value.id)
+                    else:
+                        new_value = prod_attrib_v.create({
+                            'name': variant.get('values')[idx].get('pt'),
+                            'attribute_id': record_line.get('attribute_id')
+                        })
+                        record_line.get('value_ids')[0][2].append(new_value.id)
 
-            return {'attribute_line_ids': attrib_lines}
+                attributes.append((0,0, record_line))
+
+            return {'attribute_line_ids': attributes}
 
 
     @mapping
@@ -82,6 +99,12 @@ class ProductTemplateImportMapper(ImportMapper):
     @mapping
     def backend_id(self, record):
         return {'backend_id': self.backend_record.id}
+
+    @mapping
+    def update_ctx(self, record):
+        ctx = dict(self.env.context)
+        ctx.update({'create_product_product': True})
+        self.env.context = ctx
 
     # @mapping
     # def parent_id(self, record):
