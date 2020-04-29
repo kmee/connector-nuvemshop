@@ -140,6 +140,19 @@ class ProductProductAdapter(GenericAdapter):
             resource_id=data['product_id'], id=data['id']
         )
 
+    def write(self, id, data):
+        """ Update records on the external system """
+        data['id'] = id
+        return self.store[self._nuvemshop_model].variants.update(
+            data['product_id'], data
+        )
+
+    def create(self, data):
+        """ Create a record on the external system """
+        return self.store[self._nuvemshop_model].variants.add(
+            data['product_id'], data
+        )
+
 #
 # class ProductAttribute(models.Model):
 #     _inherit = 'product.attribute'

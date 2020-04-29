@@ -89,6 +89,17 @@ class ProductProductImporter(TranslatableRecordImporter):
         super(ProductProductImporter, self)._after_import(binding)
         binding.openerp_id.import_variant_image_nuvemshop()
 
+    def _get_nuvemshop_data(self):
+        """ Return the raw Nuvemshop data for ``self.nuvemshop_id`` """
+        return self.backend_adapter.read(dict(product_id=self.template_id,
+                                              id=self.variant_id))
+
+    def run(self, nuvemshop_id, **kwargs):
+        self.template_id = nuvemshop_id['product_id']
+        self.variant_id = nuvemshop_id['id']
+
+        super(ProductProductImporter, self).run(self.variant_id, **kwargs)
+
     # def _import_dependencies(self):
     #     record = self.nuvemshop_record
     #     option_values = record.get('values')

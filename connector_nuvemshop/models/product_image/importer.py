@@ -19,7 +19,7 @@ class ProductImageImportMapper(ImportMapper):
     _model_name = 'nuvemshop.product.image'
 
     direct = [
-        ('name', 'position'),
+        ('position', 'name'),
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
     ]
