@@ -30,6 +30,7 @@
         "views/image_view.xml",
         "views/product_category_view.xml",
         "views/product_template_view.xml",
+        "views/sale_order_view.xml",
     ],
     'demo': [
     ],
