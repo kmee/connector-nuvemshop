@@ -136,7 +136,7 @@ class NuvemshopExporter(NuvemshopBaseExporter):
             if self.nuvemshop_id == 0:
                 raise exceptions.Warning(
                     _("Record on Nuvemshop have not been created"))
-            self._after_export()
+        self._after_export()
         message = _('Record exported with ID %s on Nuvemshop.')
         return message % self.nuvemshop_id
 
