@@ -73,6 +73,12 @@ class NuvemshopProductTemplate(models.Model):
                                  required=True,
                                  ondelete='cascade')
 
+    nuvemshop_variant_ids = fields.One2many(
+        comodel_name='nuvemshop.product.product',
+        inverse_name='main_template_id',
+        string='Variants'
+    )
+
     # nuvemshop_parent_id = fields.Many2one(
     #     comodel_name='nuvemshop.product.category',
     #     string='Nuvemshop Parent Category',
