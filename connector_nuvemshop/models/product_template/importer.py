@@ -34,7 +34,7 @@ class ProductTemplateImportMapper(ImportMapper):
 
     @mapping
     def attributes(self, record):
-        attributes = []
+        attributes = [(5, 0, 0)]
         prod_attrib = self.env['product.attribute']
         prod_attrib_v = self.env['product.attribute.value']
         if record.get('attributes') and record.get('variants'):
@@ -51,6 +51,8 @@ class ProductTemplateImportMapper(ImportMapper):
                     record_line.update({'attribute_id': new_attr.id})
 
                 for variant in record.get('variants'):
+                    if not variant.get('values'):
+                        continue
                     attrib = record_line.get('attribute_id')
                     value = prod_attrib_v.search([
                         ('name', '=', variant.get('values')[idx].get('pt')),
@@ -67,7 +69,7 @@ class ProductTemplateImportMapper(ImportMapper):
 
                 attributes.append((0,0, record_line))
 
-            return {'attribute_line_ids': attributes}
+            return {'attribute_line_ids': [(5, 0, 0)] + attributes}
 
 
     @mapping

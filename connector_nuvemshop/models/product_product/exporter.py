@@ -36,21 +36,6 @@ VARIANT_EXPORT_FIELDS = [
 ]
 
 
-# def delay_export_all_bindings(
-#         session, model_name, record_id, fields=None, priority=20):
-#     """ Delay a job which export all the bindings of a record.
-#
-#     In this case, it is called on records of normal models and will delay
-#     the export for all the bindings.
-#     """
-#     if session.context.get('connector_no_export'):
-#         return
-#     model = session.env[model_name]
-#     record = model.browse(record_id)
-#     for binding in record.nuvemshop_variants_bind_ids:
-#         export_record.delay(session, binding._model._name, binding.id,
-#                             fields=fields, priority=priority)
-
 @on_record_create(model_names='nuvemshop.product.product')
 def nuvemshop_product_product_create(session, model_name, record_id, fields):
     if session.context.get('connector_no_export'):
@@ -101,6 +86,16 @@ def nuvemshop_product_product_write(session, model_name, record_id, fields):
 class ProductProductExporter(NuvemshopExporter):
     _model_name = ['nuvemshop.product.product']
 
+    def _create(self, data):
+        """ Create the Nuvemshop record """
+        nuvemshop_record = self.backend_adapter.create(data)
+        return nuvemshop_record.get('id', 0)
+
+    def _update(self, data):
+        """ Update an Nuvemshop record """
+        assert self.nuvemshop_id
+        return self.backend_adapter.write(self.nuvemshop_id, data)
+
 
 @nuvemshop
 class ProductProductExportMapper(NuvemshopExportMapper):
@@ -108,7 +103,7 @@ class ProductProductExportMapper(NuvemshopExportMapper):
     direct = [
         ('image_id', 'image_id'),
         ('position', 'position'),
-        ('list_price', 'price'),
+        ('lst_price', 'price'),
         ('promotional_price', 'promotional_price'),
         ('weight', 'weight'),
         ('width', 'width'),
