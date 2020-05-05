@@ -25,6 +25,7 @@
         'wizards/wizard_nuvemshop_product_template.xml',
         'wizards/active_deactive_products_view.xml',
 
+
         "views/menus_view.xml",
 
         'views/res_partner_view.xml',

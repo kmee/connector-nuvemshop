@@ -7,11 +7,11 @@ from datetime import timedelta
 from ...unit.backend_adapter import GenericAdapter
 
 from ...unit.exporter import delay_export, delay_export_all_bindings, export_record
+
 from openerp.addons.connector.event import on_record_create, on_record_write
 
 from openerp.addons.connector.unit.mapper import (
     mapping,
-    only_create,
     ExportMapper,
 )
 from ..product_product.exporter import ProductProductExportMapper
@@ -19,7 +19,6 @@ from ...unit.mapper import TranslationNuvemshopExportMapper
 from ...unit.exporter import TranslationNuvemshopExporter
 from ...backend import nuvemshop
 from ...connector import get_environment
-
 
 
 TEMPLATE_EXPORT_FIELDS = [
@@ -82,6 +81,7 @@ def product_template_write(session, model_name, record_id, fields):
             export_record.delay(
                 session, 'nuvemshop.product.template', binding.id, fields
             )
+
 
 
 @on_record_write(model_names='nuvemshop.product.template')
@@ -249,6 +249,20 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
             return{'description': record.description}
         else:
             return{'description': ' '}
+
+    @mapping
+    def images(self, record):
+        images = []
+        for image in record.image_ids:
+            if image.url:
+                images.append(
+                    {
+                        'src': image.url,
+                        'name': image.name,
+                        'position': image.sequence
+                    }
+                )
+        return {'images': images}
 
     @mapping
     def categories(self, record):
