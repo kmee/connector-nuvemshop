@@ -19,7 +19,7 @@ class ProductImageImportMapper(ImportMapper):
     _model_name = 'nuvemshop.product.image'
 
     direct = [
-        ('name', 'position'),
+        ('position', 'name'),
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
     ]
@@ -59,27 +59,13 @@ class ProductImageImportMapper(ImportMapper):
 class ProductImageImporter(NuvemshopImporter):
     _model_name = ['nuvemshop.product.image']
 
-    # def _get_nuvemshop_data(self):
-    #     """ Return the raw PrestaShop data for ``self.nuvemshop_id`` """
-    #     return self.backend_adapter.read(self.template_id, self.image_id)
+    def _get_nuvemshop_data(self):
+        """ Return the raw PrestaShop data for ``self.nuvemshop_id`` """
+        return self.backend_adapter.read(dict(product_id=self.template_id,
+                                              id=self.image_id))
 
-    # def run(self, product_tmpl_id):
-    #     binder = self.binder_for('nuvemshop.product.template')
-    #
-    #     self.to_openerp(product_tmpl_id)
-    #     # to_backend
-    #     self.template_id = product_tmpl_id
-    #     self.image_id = image_id
-    #
-    #     try:
-    #         super(ProductImageImporter, self).run(image_id)
-    #     except Exception, e:
-    #         raise (e)
+    def run(self, nuvemshop_id, **kwargs):
+        self.template_id = nuvemshop_id['product_id']
+        self.image_id = nuvemshop_id['id']
 
-#
-# @job(default_channel='root.nuvemshop')
-# def import_product_image(session, model_name, backend_id, product_tmpl_id):
-#     """Import a product image"""
-#     env = get_environment(session, model_name, backend_id)
-#     importer = env.get_connector_unit(ProductImageImporter)
-#     importer.run(product_tmpl_id)
+        super(ProductImageImporter, self).run(self.image_id, **kwargs)

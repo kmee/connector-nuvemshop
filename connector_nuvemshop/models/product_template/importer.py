@@ -11,6 +11,9 @@ from openerp.addons.connector.unit.mapper import (
 from ...unit.importer import TranslatableRecordImporter
 from ...backend import nuvemshop
 
+from ...unit.importer import import_batch_delayed
+from openerp.addons.connector.session import ConnectorSession
+
 
 @nuvemshop
 class ProductTemplateImportMapper(ImportMapper):
@@ -23,10 +26,51 @@ class ProductTemplateImportMapper(ImportMapper):
         ('canonical_url', 'canonical_url'),
         ('brand', 'brand'),
         ('seo_title', 'seo_title'),
+        ('published', 'published'),
         ('seo_description', 'seo_description'),
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
     ]
+
+    @mapping
+    def attributes(self, record):
+        attributes = [(5, 0, 0)]
+        prod_attrib = self.env['product.attribute']
+        prod_attrib_v = self.env['product.attribute.value']
+        if record.get('attributes') and record.get('variants'):
+            for idx, attribute in enumerate(record.get('attributes')):
+                record_line = {
+                    "attribute_id": False,
+                    "value_ids": [(6,0,[])]
+                }
+                attrib = prod_attrib.search([('name', '=', attribute.get('pt'))])
+                if attrib:
+                    record_line.update({'attribute_id': attrib.id})
+                else:
+                    new_attr = prod_attrib.create({'name': attribute.get('pt')})
+                    record_line.update({'attribute_id': new_attr.id})
+
+                for variant in record.get('variants'):
+                    if not variant.get('values'):
+                        continue
+                    attrib = record_line.get('attribute_id')
+                    value = prod_attrib_v.search([
+                        ('name', '=', variant.get('values')[idx].get('pt')),
+                        ('attribute_id', '=', attrib),
+                    ])
+                    if value:
+                        record_line.get('value_ids')[0][2].append(value.id)
+                    else:
+                        new_value = prod_attrib_v.create({
+                            'name': variant.get('values')[idx].get('pt'),
+                            'attribute_id': record_line.get('attribute_id')
+                        })
+                        record_line.get('value_ids')[0][2].append(new_value.id)
+
+                attributes.append((0,0, record_line))
+
+            return {'attribute_line_ids': [(5, 0, 0)] + attributes}
+
 
     @mapping
     def product_type(self, record):
@@ -59,6 +103,12 @@ class ProductTemplateImportMapper(ImportMapper):
     def backend_id(self, record):
         return {'backend_id': self.backend_record.id}
 
+    @mapping
+    def update_ctx(self, record):
+        ctx = dict(self.env.context)
+        ctx.update({'create_product_product': True})
+        self.env.context = ctx
+
     # @mapping
     # def parent_id(self, record):
     #     if not record['parent']:
@@ -84,12 +134,14 @@ class ProductTemplateImporter(TranslatableRecordImporter):
             'handle',
             'seo_title',
             'seo_description',
+            'attributes'
         ],
     }
 
     def _after_import(self, binding):
         super(ProductTemplateImporter, self)._after_import(binding)
         binding.openerp_id.import_image_nuvemshop()
+        binding.openerp_id.import_variant_nuvemshop()
 
 
     # def _is_uptodate(self, binding):

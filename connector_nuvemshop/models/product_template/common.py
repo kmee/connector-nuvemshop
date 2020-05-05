@@ -34,6 +34,32 @@ class ProductTemplate(models.Model):
                     {'product_id': bind.nuvemshop_id}
                 )
 
+    @api.multi
+    def import_variant_nuvemshop(self):
+        session = ConnectorSession(self.env.cr, self.env.uid,
+                                   context=self.env.context)
+        for record in self:
+            for bind in record.nuvemshop_bind_ids:
+                import_batch_delayed(
+                    session,
+                    'nuvemshop.product.product',
+                    bind.backend_id.id,
+                    {'product_id': bind.nuvemshop_id}
+                )
+
+    # @api.multi
+    # def import_attribute_nuvemshop(self):
+    #     session = ConnectorSession(self.env.cr, self.env.uid,
+    #                                context=self.env.context)
+    #     for record in self:
+    #         for bind in record.nuvemshop_bind_ids:
+    #             import_batch_delayed(
+    #                 session,
+    #                 'nuvemshop.product.attribute',
+    #                 bind.backend_id.id,
+    #                 {'product_id': bind.nuvemshop_id}
+    #             )
+    #
 
 class NuvemshopProductTemplate(models.Model):
     _name = 'nuvemshop.product.template'
@@ -46,6 +72,12 @@ class NuvemshopProductTemplate(models.Model):
                                  string='template',
                                  required=True,
                                  ondelete='cascade')
+
+    nuvemshop_variant_ids = fields.One2many(
+        comodel_name='nuvemshop.product.product',
+        inverse_name='main_template_id',
+        string='Variants'
+    )
 
     # nuvemshop_parent_id = fields.Many2one(
     #     comodel_name='nuvemshop.product.category',
@@ -60,6 +92,7 @@ class NuvemshopProductTemplate(models.Model):
     description_html = fields.Html('HTML Description', translate=True)
     seo_title = fields.Char('SEO Title', translate=True)
     seo_description = fields.Char('SEO Description', translate=True)
+    published = fields.Boolean('Remote available', default=True)
 
     @api.onchange('name')
     def _onchange_name(self):

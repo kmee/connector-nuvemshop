@@ -124,7 +124,9 @@ class NuvemshopCRUDAdapter(CRUDAdapter):
         :param nuvemshop_id:
         :return:
         """
-        return urljoin(self.backend_record.url, 'admin/' + self._nuvemshop_model)
+        return urljoin(
+            self.backend_record.backend_url, 'admin/' + self._nuvemshop_model
+        )
 
     def search(self, filters=None):
         """ Search records according to some criterias

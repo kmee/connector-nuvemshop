@@ -49,3 +49,14 @@ class ImageAdapter(GenericAdapter):
         return self.store[self._nuvemshop_model].images.get(
             resource_id=data['product_id'], id=data['id']
         )
+
+    def write(self, id, data):
+        """ Update records on the external system """
+        data['id'] = id
+        return self.store[self._nuvemshop_model].images.update(
+            data['product_id'], data)
+
+    def create(self, data):
+        """ Create a record on the external system """
+        return self.store[self._nuvemshop_model].images.add(
+            data['product_id'], data)
