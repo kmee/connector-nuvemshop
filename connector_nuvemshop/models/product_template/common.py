@@ -25,7 +25,7 @@ class ProductTemplate(models.Model):
     def import_image_nuvemshop(self):
         session = ConnectorSession(self.env.cr, self.env.uid,
                                    context=self.env.context)
-        for record in self:
+        for record in self.with_context(connector_no_export=True):
             for bind in record.nuvemshop_bind_ids:
                 import_batch_delayed(
                     session,
@@ -40,7 +40,7 @@ class ProductTemplate(models.Model):
     def import_variant_nuvemshop(self):
         session = ConnectorSession(self.env.cr, self.env.uid,
                                    context=self.env.context)
-        for record in self:
+        for record in self.with_context(connector_no_export=True):
             for bind in record.nuvemshop_bind_ids:
                 import_batch_delayed(
                     session,
