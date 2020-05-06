@@ -58,7 +58,9 @@ class NuvemshopProductProduct(models.Model):
     )
 
     image_id = fields.Char(
-        string="Image"
+        string="Image",
+        compute="_compute_nuvemshop_image_id",
+        store=True
     )
 
     position = fields.Char(
@@ -97,6 +99,13 @@ class NuvemshopProductProduct(models.Model):
     def _onchange_name(self):
         if self.name:
             self.handle = self._handle_name(self.name)
+
+    @api.depends('image_ids', 'image_ids.product_variant_ids')
+    def _compute_nuvemshop_image_id(self):
+        for record in self:
+            for image in record.image_ids:
+                if record.openerp_id in image.product_variant_ids:
+                    record.image_id = image.nuvemshop_bind_ids[0].nuvemshop_id
 
 
 @nuvemshop

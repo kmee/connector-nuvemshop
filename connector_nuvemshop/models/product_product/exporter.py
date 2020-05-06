@@ -101,7 +101,7 @@ class ProductProductExporter(NuvemshopExporter):
 class ProductProductExportMapper(NuvemshopExportMapper):
     _model_name = 'nuvemshop.product.product'
     direct = [
-        ('image_id', 'image_id'),
+        # ('image_id', 'image_id'),
         ('position', 'position'),
         ('lst_price', 'price'),
         ('promotional_price', 'promotional_price'),
@@ -114,6 +114,19 @@ class ProductProductExportMapper(NuvemshopExportMapper):
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
     ]
+
+    @mapping
+    def image_id(self, record):
+        if record.image_id:
+            return {'image_id': record.image_id}
+        else:
+            image_obj = self.env['nuvemshop.product.image']
+            image = record.main_template_id.image_ids.filtered(
+                lambda x: record.openerp_id.id in x.product_variant_ids.ids
+            )
+            binder = self.binder_for('nuvemshop.product.image')
+            binder_id = binder.to_backend(image.id, wrap=True)
+            return {'image_id': binder_id}
 
     @mapping
     def stock_management(self, record):

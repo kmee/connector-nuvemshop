@@ -31,6 +31,13 @@ class NuvemshopProductImage(models.Model):
                                  required=True,
                                  ondelete='cascade')
 
+    nuvemshop_product_id = fields.Many2one(
+        comodel_name='nuvemshop.product.template',
+        string='Product',
+        required=True,
+        ondelete='cascade',
+    )
+
 
 @nuvemshop
 class ImageAdapter(GenericAdapter):

@@ -23,6 +23,7 @@
 
         'wizards/wizard_nuvemshop_product_category.xml',
         'wizards/wizard_nuvemshop_product_template.xml',
+        'wizards/wizard_nuvemshop_product_image.xml',
         'wizards/active_deactive_products_view.xml',
 
 

@@ -20,6 +20,7 @@ IMAGE_EXPORT_FIELDS = [
     'url',
     'owner_id',
     'name',
+    'product_id',
 ]
 
 @on_record_create(model_names='nuvemshop.product.image')
@@ -49,6 +50,16 @@ def nuvemshop_product_image_write(session, model_name, record_id, fields):
 class ProductImageExporter(NuvemshopExporter):
     _model_name = ['nuvemshop.product.image']
 
+    def _create(self, data):
+        """ Create the Nuvemshop record """
+        nuvemshop_record = self.backend_adapter.create(data)
+        return nuvemshop_record.get('id', 0)
+
+    def _update(self, data):
+        """ Update an Nuvemshop record """
+        assert self.nuvemshop_id
+        return self.backend_adapter.write(self.nuvemshop_id, data)
+
 
 @nuvemshop
 class ProductImageExportMapper(NuvemshopExportMapper):
@@ -62,8 +73,7 @@ class ProductImageExportMapper(NuvemshopExportMapper):
 
     @mapping
     def product_id(self, record):
-        if record['owner_id']:
-            product_id = self.binder_for(
-                'nuvemshop.product.template').to_backend(
-                record['owner_id'], wrap=True)
-            return {'product_id': product_id}
+        if record.nuvemshop_product_id:
+            return {
+                'product_id': record.nuvemshop_product_id.nuvemshop_id
+            }

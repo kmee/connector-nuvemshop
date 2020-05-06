@@ -79,6 +79,12 @@ class NuvemshopProductTemplate(models.Model):
         string='Variants'
     )
 
+    nuvemshop_image_ids = fields.One2many(
+        comodel_name='nuvemshop.product.image',
+        inverse_name='nuvemshop_product_id',
+        string='Images'
+    )
+
     # nuvemshop_parent_id = fields.Many2one(
     #     comodel_name='nuvemshop.product.category',
     #     string='Nuvemshop Parent Category',
