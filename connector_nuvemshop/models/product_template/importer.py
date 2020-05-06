@@ -33,6 +33,10 @@ class ProductTemplateImportMapper(ImportMapper):
     ]
 
     @mapping
+    def company_id(self, record):
+        return {'company_id': False}
+
+    @mapping
     def attributes(self, record):
         attributes = [(5, 0, 0)]
         prod_attrib = self.env['product.attribute']
@@ -92,7 +96,6 @@ class ProductTemplateImportMapper(ImportMapper):
     def description_html(self, record):
         if record['description']:
             return {'description_html': record['description']}
-
 
     @mapping
     def name(self, record):

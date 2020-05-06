@@ -36,6 +36,10 @@ class ProductProductImportMapper(ImportMapper):
     ]
 
     @mapping
+    def company_id(self, record):
+        return {'company_id': False}
+
+    @mapping
     def nuvemshop_image_id(self, record):
         if record['image_id']:
             image_binder = self.binder_for('nuvemshop.product.image')
