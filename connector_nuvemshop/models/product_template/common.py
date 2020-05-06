@@ -31,7 +31,10 @@ class ProductTemplate(models.Model):
                     session,
                     'nuvemshop.product.image',
                     bind.backend_id.id,
-                    {'product_id': bind.nuvemshop_id}
+                    {
+                        'product_id': bind.nuvemshop_id,
+                        'nuvemshop_product_id': bind.id,
+                    }
                 )
 
     @api.multi
@@ -44,7 +47,10 @@ class ProductTemplate(models.Model):
                     session,
                     'nuvemshop.product.product',
                     bind.backend_id.id,
-                    {'product_id': bind.nuvemshop_id}
+                    {
+                        'product_id': bind.nuvemshop_id,
+                        'main_template_id': bind.id
+                    }
                 )
 
     # @api.multi
