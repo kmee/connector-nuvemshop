@@ -33,7 +33,6 @@ class ProductTemplate(models.Model):
                     bind.backend_id.id,
                     {
                         'product_id': bind.nuvemshop_id,
-                        'nuvemshop_product_id': bind.id,
                     }
                 )
 
@@ -49,7 +48,6 @@ class ProductTemplate(models.Model):
                     bind.backend_id.id,
                     {
                         'product_id': bind.nuvemshop_id,
-                        'main_template_id': bind.id
                     }
                 )
 

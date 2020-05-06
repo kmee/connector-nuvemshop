@@ -38,6 +38,26 @@ class NuvemshopProductImage(models.Model):
         ondelete='cascade',
     )
 
+    position = fields.Char(
+        string='Position'
+    )
+
+    nuvemshop_variant_ids = fields.One2many(
+        comodel_name='nuvemshop.product.product',
+        inverse_name='nuvemshop_image_id'
+    )
+
+    @api.one
+    @api.onchange('nuvemshop_variant_ids')
+    def _onchange_nuvemshop_variants(self):
+        self.product_variant_ids = self.nuvemshop_variant_ids.mapped('openerp_id')
+
+
+    @api.multi
+    @api.onchange('sequence')
+    def _onchange_sequence(self):
+        for record in self:
+            record.position=record.sequence
 
 @nuvemshop
 class ImageAdapter(GenericAdapter):

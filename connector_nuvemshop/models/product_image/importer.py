@@ -19,10 +19,20 @@ class ProductImageImportMapper(ImportMapper):
     _model_name = 'nuvemshop.product.image'
 
     direct = [
-        ('position', 'name'),
+        ('position', 'position'),
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
     ]
+
+    @mapping
+    def nuvemshop_product_id(self, record):
+        if record['product_id']:
+            nuvemshop_product_id = self.binder_for(
+                'nuvemshop.product.template').to_openerp(
+                record['product_id'])
+            return {
+                'nuvemshop_product_id': nuvemshop_product_id.id
+            }
 
     @mapping
     def storage(self, record):
@@ -41,8 +51,15 @@ class ProductImageImportMapper(ImportMapper):
         if record['product_id']:
             product_id = self.binder_for(
                 'nuvemshop.product.template').to_openerp(
-                record['product_id'], unwrap=True).id
-            return {'owner_id': product_id}
+                record['product_id'], unwrap=True)
+
+            return {'owner_id': product_id.id}
+
+    @mapping
+    def name(self, record):
+        if record['src']:
+            url = record['src'].replace('\\', '')
+            return {'name': str(url)}
 
     @mapping
     def url(self, record):

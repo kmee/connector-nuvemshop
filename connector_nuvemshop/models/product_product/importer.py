@@ -18,7 +18,7 @@ class ProductProductImportMapper(ImportMapper):
     _model_name = 'nuvemshop.product.product'
 
     direct = [
-        ('image_id', 'image_id'),
+        # ('image_id', 'image_id'),
         #('product_id', 'product_id'),
         ('position', 'position'),
         ('price', 'list_price'),
@@ -34,6 +34,17 @@ class ProductProductImportMapper(ImportMapper):
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
     ]
+
+    @mapping
+    def nuvemshop_image_id(self, record):
+        if record['image_id']:
+            image_binder = self.binder_for('nuvemshop.product.image')
+            image_record = image_binder.to_openerp(record['image_id'])
+            return {'nuvemshop_image_id': image_record.id}
+
+    @mapping
+    def product_type(self, record):
+        return {'type': 'product'}
 
     @mapping
     def values(self, record):
@@ -62,6 +73,14 @@ class ProductProductImportMapper(ImportMapper):
             return {'product_tmpl_id': product_id}
 
     @mapping
+    def main_template_id(self, record):
+        if record['product_id']:
+            product_id = self.binder_for(
+                'nuvemshop.product.template').to_openerp(
+                record['product_id'])
+            return {'main_template_id': product_id.id}
+
+    @mapping
     def cost_method(self, record):
         return {
             'cost_method': self.env['product.template'].fields_get(
@@ -71,8 +90,6 @@ class ProductProductImportMapper(ImportMapper):
     @mapping
     def backend_id(self, record):
         return {'backend_id': self.backend_record.id}
-
-
 
 
 @nuvemshop

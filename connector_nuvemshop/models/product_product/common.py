@@ -63,6 +63,11 @@ class NuvemshopProductProduct(models.Model):
         store=True
     )
 
+    nuvemshop_image_id = fields.Many2one(
+        comodel_name='nuvemshop.product.image',
+        string='Image Record'
+    )
+
     position = fields.Char(
         string='Position'
     )
@@ -100,12 +105,11 @@ class NuvemshopProductProduct(models.Model):
         if self.name:
             self.handle = self._handle_name(self.name)
 
-    @api.depends('image_ids', 'image_ids.product_variant_ids')
+    @api.depends('image_ids', 'image_ids.product_variant_ids', 'nuvemshop_image_id')
     def _compute_nuvemshop_image_id(self):
         for record in self:
-            for image in record.image_ids:
-                if record.openerp_id in image.product_variant_ids:
-                    record.image_id = image.nuvemshop_bind_ids[0].nuvemshop_id
+            if record.nuvemshop_image_id:
+                record.image_id = record.nuvemshop_image_id.nuvemshop_id
 
 
 @nuvemshop

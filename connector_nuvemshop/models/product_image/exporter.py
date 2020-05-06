@@ -17,6 +17,7 @@ from ...backend import nuvemshop
 
 IMAGE_EXPORT_FIELDS = [
     'sequence',
+    'position',
     'url',
     'owner_id',
     'name',
@@ -66,7 +67,7 @@ class ProductImageExportMapper(NuvemshopExportMapper):
     _model_name = 'nuvemshop.product.image'
     direct = [
         ('url', 'src'),
-        ('sequence', 'position'),
+        ('position', 'position'),
         ('created_at', 'created_at'),
         ('updated_at', 'updated_at'),
     ]
