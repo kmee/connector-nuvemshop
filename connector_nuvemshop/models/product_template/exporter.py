@@ -209,20 +209,6 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
         else:
             return{'description': ' '}
 
-    # @mapping
-    # def images(self, record):
-    #     images = []
-    #     for image in record.image_ids:
-    #         if image.url:
-    #             images.append(
-    #                 {
-    #                     'src': image.url,
-    #                     'name': image.name,
-    #                     'position': image.sequence
-    #                 }
-    #             )
-    #     return {'images': images}
-
     @mapping
     def categories(self, record):
         ext_categ_ids = []

@@ -31,6 +31,13 @@ class NuvemshopSaleOrder(models.Model):
                                  string='category',
                                  required=True,
                                  ondelete='cascade')
+
+    nuvemshop_order_line_ids = fields.One2many(
+        comodel_name='nuvemshop.sale.order.line',
+        inverse_name='nuvemshop_order_id',
+        string='Nuvemshop Order Lines',
+    )
+
     token = fields.Char()
     store_id = fields.Char()
     shipping_min_days = fields.Integer()
@@ -90,7 +97,65 @@ class NuvemshopSaleOrder(models.Model):
 
 
 @nuvemshop
-class CategoryAdapter(GenericAdapter):
+class SaleOrderAdapter(GenericAdapter):
     _model_name = 'nuvemshop.sale.order'
     _nuvemshop_model = 'orders'
 
+
+class SaleOrderLine(models.Model):
+    _inherit = 'sale.order.line'
+
+    nuvemshop_bind_ids = fields.One2many(
+        comodel_name='nuvemshop.sale.order.line',
+        inverse_name='openerp_id',
+        string="Nuvemshop Bindings",
+    )
+
+
+class NuvemshopSaleOrderLine(models.Model):
+    _name = 'nuvemshop.sale.order.line'
+    _inherit = ['nuvemshop.binding', 'nuvemshop.handle.abstract']
+    _inherits = {'sale.order.line': 'openerp_id'}
+    _description = 'nuvemshop sale order line'
+    _rec_name = 'name'
+
+    openerp_id = fields.Many2one(comodel_name='sale.order.line',
+                                 string='Order line',
+                                 required=True,
+                                 ondelete='cascade')
+
+    nuvemshop_order_id = fields.Many2one(
+        comodel_name='nuvemshop.sale.order',
+        string='Nuvemshop Order',
+    )
+
+    @api.model
+    def create(self, vals):
+        nuvemshop_sale_order = self.env['nuvemshop.sale.order'].search([
+            ('id', '=', vals['nuvemshop_order_id'])
+        ], limit=1)
+        vals['order_id'] = nuvemshop_sale_order.openerp_id.id
+        return super(NuvemshopSaleOrderLine, self).create(vals)
+
+@nuvemshop
+class SaleOrderLineAdapter(GenericAdapter):
+    _model_name = 'nuvemshop.sale.order.line'
+    _nuvemshop_model = 'orders'
+
+    def read(self, data, attributes=None):
+        """ Returns the information of a record """
+        result = self.store[self._nuvemshop_model].get(
+            id=data.get('nuvemshop_order_id')
+        )
+
+        lines = [
+            line for line in result.get('products')
+            if line.get('id') == data.get('id')
+        ]
+
+        lines[0].update({
+            'nuvemshop_partner_id': result.get('customer').get('id'),
+            'nuvemshop_order_id': result.get('id'),
+        })
+
+        return lines[0]
