@@ -54,6 +54,9 @@ class ProductImageExporter(NuvemshopExporter):
     def _create(self, data):
         """ Create the Nuvemshop record """
         nuvemshop_record = self.backend_adapter.create(data)
+        if self.erp_record.url != nuvemshop_record.get('src'):
+            self.erp_record.with_context(
+                connector_no_export=True).url = nuvemshop_record.get('src')
         return nuvemshop_record.get('id', 0)
 
     def _update(self, data):
