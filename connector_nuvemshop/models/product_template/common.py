@@ -9,8 +9,8 @@ from openerp.addons.connector.session import ConnectorSession
 from ...backend import nuvemshop
 from ...unit.importer import import_batch_delayed
 
-
 _logger = logging.getLogger(__name__)
+
 
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
@@ -51,19 +51,6 @@ class ProductTemplate(models.Model):
                     }
                 )
 
-    # @api.multi
-    # def import_attribute_nuvemshop(self):
-    #     session = ConnectorSession(self.env.cr, self.env.uid,
-    #                                context=self.env.context)
-    #     for record in self:
-    #         for bind in record.nuvemshop_bind_ids:
-    #             import_batch_delayed(
-    #                 session,
-    #                 'nuvemshop.product.attribute',
-    #                 bind.backend_id.id,
-    #                 {'product_id': bind.nuvemshop_id}
-    #             )
-    #
 
 class NuvemshopProductTemplate(models.Model):
     _name = 'nuvemshop.product.template'
@@ -89,11 +76,6 @@ class NuvemshopProductTemplate(models.Model):
         string='Images'
     )
 
-    # nuvemshop_parent_id = fields.Many2one(
-    #     comodel_name='nuvemshop.product.category',
-    #     string='Nuvemshop Parent Category',
-    #     ondelete='cascade',)
-    #
     handle = fields.Char('Handle', translate=True)
     published = fields.Boolean('Published')
     free_shipping = fields.Boolean('Free Shipping')
@@ -102,7 +84,6 @@ class NuvemshopProductTemplate(models.Model):
     description_html = fields.Html('HTML Description', translate=True)
     seo_title = fields.Char('SEO Title', translate=True)
     seo_description = fields.Char('SEO Description', translate=True)
-    published = fields.Boolean('Remote available', default=True)
 
     @api.onchange('name')
     def _onchange_name(self):
