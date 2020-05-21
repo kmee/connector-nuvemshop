@@ -163,10 +163,16 @@ class GenericAdapter(NuvemshopCRUDAdapter):
     def search(self, filters=None):
         """ Search records according to some criterias
         and returns a list of ids """
-        return [
-            r.toDict().get('id') for r in
-            self.store[self._nuvemshop_model].list(fields=['id'], filters=filters)
-        ]
+        result = []
+
+        for request in self.store[self._nuvemshop_model].list(
+            fields=['id'], filters=filters
+        ):
+            result += [
+                r.toDict().get('id') for r in request
+            ]
+
+        return result
 
     def read(self, data, attributes=None):
         """ Returns the information of a record """
