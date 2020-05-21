@@ -99,7 +99,7 @@ class NuvemshopImporter(Importer):
         if importer_class is None:
             importer_class = NuvemshopImporter
         binder = self.binder_for(binding_model)
-        if always or binder.to_openerp(nuvemshop_id) is None:
+        if always or not binder.to_openerp(nuvemshop_id):
             importer = self.unit_for(importer_class, model=binding_model)
             importer.run(nuvemshop_id)
 
@@ -115,7 +115,7 @@ class NuvemshopImporter(Importer):
     def _import_parent(self):
         parent_id = self.nuvemshop_record.get(self._parent_field)
         if parent_id:
-            if self.binder.to_openerp(parent_id) is None:
+            if self.binder.to_openerp(parent_id) in (None, False):
                 importer = self.unit_for(NuvemshopImporter)
                 importer.run(parent_id)
 
