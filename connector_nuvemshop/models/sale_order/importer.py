@@ -4,7 +4,12 @@
 
 import logging
 
-from openerp.addons.connector.exception import MappingError
+from openerp.addons.connector.exception import (
+    RetryableJobError,
+    FailedJobError,
+    MappingError
+)
+
 from openerp import fields
 from openerp.addons.l10n_br_base.tools.misc import calc_price_ratio
 from openerp.addons.connector.unit.mapper import (
@@ -12,6 +17,8 @@ from openerp.addons.connector.unit.mapper import (
     ImportMapper
 )
 
+from ..res_partner.importer import ResPartnerImporter
+from ..product_template.importer import ProductTemplateImporter
 from ...unit.importer import NuvemshopImporter
 from ...backend import nuvemshop
 from ...unit.backend_adapter import GenericAdapter
@@ -126,6 +133,14 @@ class SaleOrderImportMapper(ImportMapper):
             partner_id = self.binder_for(
                 'nuvemshop.res.partner').to_openerp(
                 record['customer']['id'], unwrap=True).id
+
+            if not partner_id:
+                raise RetryableJobError(
+                    'Partner not imported yet. The job will be retried later',
+                    seconds=10,
+                    ignore_retry=True
+                )
+
             company = self.backend_record.company_id or self.env.user.company_id
 
             ctx = dict(self.env.context)
@@ -139,85 +154,6 @@ class SaleOrderImportMapper(ImportMapper):
 
             val.update({'partner_id': partner_id})
             return val
-
-    # @mapping
-    # def order_line(self, record):
-    #     lines = record.get('products', [])
-    #     order_lines = []
-    #     partner_id = self.binder_for(
-    #         'nuvemshop.res.partner').to_openerp(
-    #         record['customer']['id'], unwrap=True).id
-    #     company = self.env['res.company'].browse(self.env.user.company_id.id)
-    #     fiscal_category_id = company.sale_fiscal_category_id
-    #     self.env.context = dict(self.env.context)
-    #     self.env.context.update({
-    #         'company_id': company.id,
-    #         'fiscal_category_id': fiscal_category_id.id,
-    #     })
-    #     val = self.env['sale.order'].onchange_partner_id(
-    #         partner_id)['value']
-    #     self.env.context.update({
-    #         'parent_fiscal_category_id': fiscal_category_id.id,
-    #         'partner_invoice_id': val['partner_invoice_id'],
-    #         'lang': 'pt_BR',
-    #         'parent_fiscal_position': False,
-    #         'tz': 'America/Sao_Paulo',
-    #         'fiscal_position': val['fiscal_position'],
-    #         'partner_id': partner_id,
-    #     })
-    #     result = {'value': {'fiscal_position': False}}
-    #     kwargs = {
-    #         'partner_id': partner_id,
-    #         'partner_invoice_id': val['partner_invoice_id'],
-    #         'fiscal_category_id': fiscal_category_id.id,
-    #         'company_id': company.id,
-    #         'context': self.env.context
-    #     }
-    #     result = self.env[
-    #         'account.fiscal.position.rule'].apply_fiscal_mapping(
-    #         result, **kwargs)
-    #     fiscal_position = result['value'].get('fiscal_position')
-    #     for line in lines:
-    #         template_id = self.binder_for(
-    #             'nuvemshop.product.template').to_openerp(
-    #             line['product_id'], unwrap=True).id
-    #         product_id = self.env['product.product'].search([
-    #             ('product_tmpl_id', '=', template_id)
-    #         ])
-    #         res = self.env['sale.order.line'].product_id_change(
-    #             pricelist=val.get('pricelist_id'),
-    #             product=product_id.id,
-    #             qty=float(line.get('quantity')),
-    #             uom=False,
-    #             qty_uos=False,
-    #             uos=False,
-    #             name=product_id.name,
-    #             partner_id=partner_id,
-    #             date_order=fields.Datetime.now(),
-    #             fiscal_position=False,
-    #             flag=False,
-    #         )['value']
-    #         res.update({
-    #             'product_id': product_id.id,
-    #             'qty': float(line.get('quantity')),
-    #             'price_unit': float(line.get('price')),
-    #             'freight_value': calc_price_ratio(
-    #                 float(line.get('quantity')) * float(line.get('price')),
-    #                 float(record['shipping_cost_customer']),
-    #                 float(record['subtotal'])),
-    #             'discount': (
-    #                 float(record['discount']) +
-    #                 float(record['discount_coupon']) +
-    #                 float(record['discount_gateway'])) / float(
-    #                 record['subtotal']
-    #             ),
-    #         })
-    #         if res.get('tax_id'):
-    #             res['tax_id'] = [(6, 0, res['tax_id'].ids)]
-    #
-    #         order_lines += [(0, 0, res)]
-    #     return {'order_line': order_lines,
-    #             'fiscal_position': fiscal_position}
 
     #TODO: REFATORAR PARA ESCOLHER CONDICAO DE PAGAMENTO CORRETAMENTE
     @mapping
@@ -298,6 +234,20 @@ class SaleOrderImportMapper(ImportMapper):
 class SaleOrderImporter(NuvemshopImporter):
     _model_name = ['nuvemshop.sale.order']
 
+    def _import_dependencies(self):
+        record = self.nuvemshop_record
+        self._import_dependency(
+            record['customer']['id'],
+            'nuvemshop.res.partner',
+            ResPartnerImporter,
+        )
+        for line in record['products']:
+            self._import_dependency(
+                line['product_id'],
+                'nuvemshop.product.template',
+                ProductTemplateImporter,
+            )
+
     def _after_import(self, binding):
         super(SaleOrderImporter, self)._after_import(binding)
         binding.openerp_id.onchange_fiscal()
@@ -348,9 +298,14 @@ class SaleOrderLineImportMapper(ImportMapper):
             product_product = product_product_binder.to_openerp(
                 record.get('variant_id'), unwrap=True
             )
-
-            return {'product_id': product_product.id}
-
+            if product_product:
+                return {'product_id': product_product.id}
+            else:
+                raise RetryableJobError(
+                    'The product was not imported yet. The job will be retried later',
+                    seconds=20,
+                    ignore_retry=True
+                )
     @mapping
     def backend_id(self, record):
         return {'backend_id': self.backend_record.id}
