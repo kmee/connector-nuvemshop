@@ -3,6 +3,9 @@
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
 from openerp.addons.connector.exception import MappingError
+from dateutil.parser.isoparser import isoparse
+
+from openerp import fields
 from openerp.addons.connector.unit.mapper import (
     mapping,
     ImportMapper
@@ -26,11 +29,28 @@ class ProductTemplateImportMapper(ImportMapper):
         ('canonical_url', 'canonical_url'),
         ('brand', 'brand'),
         ('seo_title', 'seo_title'),
-        ('published', 'published'),
         ('seo_description', 'seo_description'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
+        # ('created_at', 'created_at'),
+        # ('updated_at', 'updated_at'),
     ]
+
+    @mapping
+    def created_at(self, record):
+        if record.get('created_at'):
+            created = isoparse(record.get('created_at')).replace(tzinfo=None)
+            created_at = fields.Datetime.to_string(created)
+            return {
+                'created_at': created_at,
+            }
+
+    @mapping
+    def updated_at(self, record):
+        if record.get('updated_at'):
+            updated = isoparse(record.get('updated_at')).replace(tzinfo=None)
+            updated_at = fields.Datetime.to_string(updated)
+            return {
+                'updated_at': updated_at,
+            }
 
     @mapping
     def company_id(self, record):
