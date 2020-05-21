@@ -2,12 +2,15 @@
 # Copyright (C) 2020  Luis Felipe Mileo - KMEE
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
+from dateutil.parser.isoparser import isoparse
+
 from openerp.addons.connector.exception import MappingError
 from openerp.addons.connector.unit.mapper import (
     mapping,
     ImportMapper
 )
 from openerp.addons.connector.unit.backend_adapter import BackendAdapter
+from openerp import fields
 
 from ...unit.importer import TranslatableRecordImporter, NuvemshopImporter
 from ...backend import nuvemshop
@@ -31,9 +34,27 @@ class ProductProductImportMapper(ImportMapper):
         ('sku', 'default_code'),
         # ('values', 'values'),
         ('barcode', 'ean13'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
+        # ('created_at', 'created_at'),
+        # ('updated_at', 'updated_at'),
     ]
+
+    @mapping
+    def created_at(self, record):
+        if record.get('created_at'):
+            created = isoparse(record.get('created_at')).replace(tzinfo=None)
+            created_at = fields.Datetime.to_string(created)
+            return {
+                'created_at': created_at,
+            }
+
+    @mapping
+    def updated_at(self, record):
+        if record.get('updated_at'):
+            updated = isoparse(record.get('updated_at')).replace(tzinfo=None)
+            updated_at = fields.Datetime.to_string(updated)
+            return {
+                'updated_at': updated_at,
+            }
 
     @mapping
     def company_id(self, record):
@@ -66,7 +87,6 @@ class ProductProductImportMapper(ImportMapper):
                 ])
                 values.append(value_id.id)
             return {'attribute_value_ids': [(6,0, values)]}
-
 
     @mapping
     def product_tmpl_id(self, record):
