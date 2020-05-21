@@ -115,7 +115,8 @@ class NuvemShopBackend(models.Model):
                                    context=self.env.context)
         import_start_time = datetime.now()
         backend_id = self.id
-        from_date = None
+        from_date = self.import_partners_since
+        self.import_partners_since = import_start_time
         import_batch_delayed.delay(
             session, 'nuvemshop.res.partner', backend_id,
             {'updated_at_min': from_date,
@@ -135,7 +136,8 @@ class NuvemShopBackend(models.Model):
                                    context=self.env.context)
         import_start_time = datetime.now()
         backend_id = self.id
-        from_date = None
+        from_date = self.import_orders_since
+        self.import_orders_since = import_start_time
         import_batch_delayed.delay(
             session, 'nuvemshop.sale.order', backend_id,
             {'updated_at_min': from_date,
@@ -155,7 +157,8 @@ class NuvemShopBackend(models.Model):
                                    context=self.env.context)
         import_start_time = datetime.now()
         backend_id = self.id
-        from_date = None
+        from_date = self.import_templates_since
+        self.import_templates_since = import_start_time
         import_batch_delayed.delay(
             session, 'nuvemshop.product.template', backend_id,
             {'updated_at_min': from_date,
@@ -175,7 +178,8 @@ class NuvemShopBackend(models.Model):
                                    context=self.env.context)
         import_start_time = datetime.now()
         backend_id = self.id
-        from_date = None
+        from_date = self.import_images_since
+        self.import_images_since = import_start_time
         import_batch_delayed.delay(
             session, 'nuvemshop.product.image', backend_id,
             {'updated_at_min': from_date,
@@ -192,4 +196,3 @@ class NuvemShopBackend(models.Model):
             for product_id in products:
                 backend.import_image(product_id)
         return True
-
