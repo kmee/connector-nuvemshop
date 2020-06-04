@@ -122,16 +122,16 @@ class ProductTemplateExporter(TranslationNuvemshopExporter):
     def export_images(self):
         image_obj = self.session.env['nuvemshop.product.image']
 
-        for index, product in enumerate(self.erp_record.image_ids):
+        for index, image in enumerate(self.erp_record.image_ids):
             image_ext_id = image_obj.search([
                 ('backend_id', '=', self.backend_record.id),
-                ('openerp_id', '=', product.id),
+                ('openerp_id', '=', image.id),
             ])
             if not image_ext_id:
                 image_ext_id = image_obj.with_context(
                     connector_no_export=True).create({
                     'backend_id': self.backend_record.id,
-                    'openerp_id': product.id,
+                    'openerp_id': image.id,
                     'nuvemshop_product_id': self.binding_id,
                 })
             export_record.delay(

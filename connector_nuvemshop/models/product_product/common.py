@@ -29,8 +29,6 @@ class ProductProduct(models.Model):
                         lambda x: str(bind.image_id) in x.nuvemshop_id
                     )
                     image_record.product_variant_ids += record
-                    image_record.sequence = 0
-        return
 
 
 class NuvemshopProductProduct(models.Model):

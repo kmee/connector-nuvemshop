@@ -77,7 +77,10 @@ class NuvemshopProductTemplate(models.Model):
     )
 
     handle = fields.Char('Handle', translate=True)
-    published = fields.Boolean('Published')
+    published = fields.Boolean(
+        string='Published',
+        default=True
+    )
     free_shipping = fields.Boolean('Free Shipping')
     canonical_url = fields.Char('Canonical URL')
     brand = fields.Char('Brand')
