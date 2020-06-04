@@ -117,29 +117,30 @@ class ProductProductExportMapper(NuvemshopExportMapper):
 
     @mapping
     def image_id(self, record):
-        if record.image_id:
-            return {'image_id': record.image_id}
-        else:
-            image_obj = self.env['nuvemshop.product.image']
-            image = record.main_template_id.image_ids.filtered(
-                lambda x: record.openerp_id.id in x.product_variant_ids.ids
-            )
-            binder = self.binder_for('nuvemshop.product.image')
-            binder_id = binder.to_backend(image.id, wrap=True)
-            return {'image_id': binder_id}
+        if record.nuvemshop_image_id:
+            return {
+                'image_id': record.nuvemshop_image_id.nuvemshop_id
+            }
 
     @mapping
     def stock_management(self, record):
         if record['stock_management']:
-            return {'stock_management': record['stock_management']}
+            return {
+                'stock_management': record['stock_management']
+            }
 
     @mapping
     def product_id(self, record):
         if record['main_template_id']:
-            return {'product_id': record.main_template_id.nuvemshop_id}
+            return {
+                'product_id': record.main_template_id.nuvemshop_id
+            }
 
     @mapping
     def values(self, record):
         if record['attribute_value_ids']:
-            return {'values': [
-                dict(pt=val.name) for val in record['attribute_value_ids']]}
+            return {
+                'values': [
+                    dict(pt=val.name) for val in record['attribute_value_ids']
+                ]
+            }

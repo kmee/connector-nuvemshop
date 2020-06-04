@@ -52,11 +52,6 @@ class NuvemshopProductProduct(models.Model):
         ondelete='cascade',
     )
 
-    image_id = fields.Char(
-        string="Image",
-        compute="_compute_nuvemshop_image_id",
-    )
-
     nuvemshop_image_id = fields.Many2one(
         comodel_name='nuvemshop.product.image',
         string='Image Record'
@@ -98,12 +93,6 @@ class NuvemshopProductProduct(models.Model):
     def _onchange_name(self):
         if self.name:
             self.handle = self._handle_name(self.name)
-
-    @api.depends('image_ids', 'image_ids.product_variant_ids', 'nuvemshop_image_id')
-    def _compute_nuvemshop_image_id(self):
-        for record in self:
-            if record.nuvemshop_image_id:
-                record.image_id = record.nuvemshop_image_id.nuvemshop_id
 
 
 @nuvemshop

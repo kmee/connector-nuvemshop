@@ -26,7 +26,7 @@
             <form string="nuvemshop Product product">
                 <group string="Primary Data">
                     <field name="backend_id" string="Backend"/>
-                    <field name="image_id"/>
+                    <field name="nuvemshop_image_id"/>
                     <field name="position"/>
                     <field name="promotional_price"/>
                     <field name="stock_management"/>
