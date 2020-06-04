@@ -9,7 +9,7 @@ from openerp.addons.connector.unit.mapper import (
     ImportMapper
 )
 
-from ...unit.importer import NuvemshopImporter
+from ...unit.importer import NuvemshopImporter, normalize_datetime
 from ...backend import nuvemshop
 from ...connector import get_environment
 
@@ -20,9 +20,10 @@ class ProductImageImportMapper(ImportMapper):
 
     direct = [
         ('position', 'position'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
+        (normalize_datetime('created_at'), 'created_at'),
+        (normalize_datetime('updated_at'), 'updated_at'),
     ]
+
 
     @mapping
     def nuvemshop_product_id(self, record):

@@ -10,7 +10,7 @@ from openerp.addons.connector.unit.mapper import (
 )
 from openerp import fields
 
-from ...unit.importer import TranslatableRecordImporter
+from ...unit.importer import TranslatableRecordImporter, normalize_datetime
 from ...backend import nuvemshop
 
 
@@ -29,25 +29,9 @@ class ProductProductImportMapper(ImportMapper):
         ('depth', 'depth'),
         ('sku', 'default_code'),
         ('barcode', 'ean13'),
+        (normalize_datetime('created_at'), 'created_at'),
+        (normalize_datetime('updated_at'), 'updated_at'),
     ]
-
-    @mapping
-    def created_at(self, record):
-        if record.get('created_at'):
-            created = isoparse(record.get('created_at')).replace(tzinfo=None)
-            created_at = fields.Datetime.to_string(created)
-            return {
-                'created_at': created_at,
-            }
-
-    @mapping
-    def updated_at(self, record):
-        if record.get('updated_at'):
-            updated = isoparse(record.get('updated_at')).replace(tzinfo=None)
-            updated_at = fields.Datetime.to_string(updated)
-            return {
-                'updated_at': updated_at,
-            }
 
     @mapping
     def company_id(self, record):

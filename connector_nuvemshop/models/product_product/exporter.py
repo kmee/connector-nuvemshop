@@ -111,8 +111,6 @@ class ProductProductExportMapper(NuvemshopExportMapper):
         ('depth', 'depth'),
         ('default_code', 'sku'),
         ('ean13', 'barcode'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
     ]
 
     @mapping

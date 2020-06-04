@@ -60,8 +60,6 @@ class ProductCategoryExportMapper(TranslationNuvemshopExportMapper):
         ('handle', 'handle'),
         ('seo_title', 'seo_title'),
         ('seo_description', 'seo_description'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
     ]
 
     _translatable_fields = {

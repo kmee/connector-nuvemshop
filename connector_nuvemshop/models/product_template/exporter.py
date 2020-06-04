@@ -177,8 +177,6 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
         ('seo_description', 'seo_description'),
         ('brand', 'brand'),
         ('published', 'published'),
-        # ('created_at', 'created_at'),
-        # ('updated_at', 'updated_at'),
         # ('variants', 'variants'),
         # ('tags', 'tags'),
         # ('images', 'images'),

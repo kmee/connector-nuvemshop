@@ -19,7 +19,7 @@ from openerp.addons.connector.unit.mapper import (
 
 from ..res_partner.importer import ResPartnerImporter
 from ..product_template.importer import ProductTemplateImporter
-from ...unit.importer import NuvemshopImporter
+from ...unit.importer import NuvemshopImporter, normalize_datetime
 from ...backend import nuvemshop
 from ...unit.backend_adapter import GenericAdapter
 
@@ -82,8 +82,8 @@ class SaleOrderImportMapper(ImportMapper):
         ('paid_at', 'paid_at'),
         ('landing_url', 'landing_url'),
         ('app_id', 'app_id'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
+        (normalize_datetime('created_at'), 'created_at'),
+        (normalize_datetime('updated_at'), 'updated_at'),
     ]
 
     def _get_sale_order_lines(self, record):
@@ -264,8 +264,8 @@ class SaleOrderLineImportMapper(ImportMapper):
         ('name', 'name'),
         ('quantity', 'product_uom_qty'),
         ('price', 'price_unit'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
+        (normalize_datetime('created_at'), 'created_at'),
+        (normalize_datetime('updated_at'), 'updated_at'),
     ]
 
     @mapping

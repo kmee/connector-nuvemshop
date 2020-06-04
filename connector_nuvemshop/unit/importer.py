@@ -29,6 +29,19 @@ RETRY_ON_ADVISORY_LOCK = 1  # seconds
 RETRY_WHEN_CONCURRENT_DETECTED = 2  # seconds
 
 
+def normalize_datetime(field):
+    """Change a invalid date which comes from Nuvemshop, if
+    no real date is set to null for correct import to
+    OpenERP"""
+
+    def modifier(self, record, to_attr):
+        clean_date = isoparse(record.get(field)).replace(tzinfo=None)
+        new_date = fields.Datetime.to_string(clean_date)
+        return new_date
+
+    return modifier
+
+
 class NuvemshopImporter(Importer):
     """ Base importer for NuvemshopCommerce """
 
