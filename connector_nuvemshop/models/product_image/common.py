@@ -50,13 +50,14 @@ class NuvemshopProductImage(models.Model):
     @api.one
     @api.onchange('nuvemshop_variant_ids')
     def _onchange_nuvemshop_variants(self):
+        self = self.with_context(connector_no_export=True)
         self.product_variant_ids = self.nuvemshop_variant_ids.mapped('openerp_id')
 
 
     @api.multi
     @api.onchange('sequence')
     def _onchange_sequence(self):
-        for record in self:
+        for record in self.with_context(connector_no_export=True):
             record.position=record.sequence
 
 @nuvemshop
