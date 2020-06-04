@@ -117,7 +117,7 @@ class NuvemshopExporter(NuvemshopBaseExporter):
         map_record = self.mapper.map_record(self.erp_record)
 
         if self.nuvemshop_id:
-            record = map_record.values()
+            record = map_record.values(fields=fields)
             if not record:
                 return _('Nothing to export.')
             # special check on data before export
@@ -189,8 +189,6 @@ def related_action_record(session, job):
 @related_action(action=related_action_record)
 def export_record(session, model_name, binding_id, fields=None):
     """ Export a record on Nuvemshop """
-    # TODO: FIX NUVEMSHOP do not support partial edit
-    fields = None
     record = session.env[model_name].browse(binding_id)
     env = get_environment(session, model_name, record.backend_id.id)
     exporter = env.get_connector_unit(NuvemshopExporter)
