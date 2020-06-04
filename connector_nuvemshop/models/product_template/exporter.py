@@ -37,7 +37,7 @@ TEMPLATE_EXPORT_FIELDS = [
     # 'updated_at',
     'product_variant_ids',
     'tags',
-    'image_ids',
+    # 'image_ids',
     'categ_ids',
     'categ_id',
     'remote_available',
@@ -69,18 +69,19 @@ def product_template_write(session, model_name, record_id, fields):
         return
     model = session.env[model_name]
     record = model.browse(record_id)
-    for binding in record.nuvemshop_bind_ids:
-        func = "openerp.addons.connector_nuvemshop.unit.exporter." \
-               "export_record('nuvemshop.product.template', %s," \
-               % binding.id
-        jobs = session.env['queue.job'].sudo().search(
-            [('func_string', 'like', "%s%%" % func),
-             ('state', 'not in', ['done', 'failed'])]
-        )
-        if not jobs:
-            export_record.delay(
-                session, 'nuvemshop.product.template', binding.id, fields
+    if set(fields.keys()) <= set(TEMPLATE_EXPORT_FIELDS):
+        for binding in record.nuvemshop_bind_ids:
+            func = "openerp.addons.connector_nuvemshop.unit.exporter." \
+                   "export_record('nuvemshop.product.template', %s," \
+                   % binding.id
+            jobs = session.env['queue.job'].sudo().search(
+                [('func_string', 'like', "%s%%" % func),
+                 ('state', 'not in', ['done', 'failed'])]
             )
+            if not jobs:
+                export_record.delay(
+                    session, 'nuvemshop.product.template', binding.id, fields
+                )
 
 
 
