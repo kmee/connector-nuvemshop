@@ -23,11 +23,8 @@ class ProductProduct(models.Model):
     def import_variant_image_nuvemshop(self):
         for record in self:
             for bind in record.nuvemshop_variants_bind_ids:
-                if bind.image_id:
-                    image_record = record.nuvemshop_bind_ids.mapped(
-                        'image_ids').mapped('nuvemshop_bind_ids').filtered(
-                        lambda x: str(bind.image_id) in x.nuvemshop_id
-                    )
+                if bind.nuvemshop_image_id:
+                    image_record = bind.nuvemshop_image_id
                     image_record.product_variant_ids += record
 
 

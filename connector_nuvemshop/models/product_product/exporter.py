@@ -19,7 +19,7 @@ from ...backend import nuvemshop
 
 
 VARIANT_EXPORT_FIELDS = [
-    'image_id',
+    'nuvemshop_image_id',
     'position',
     'list_price',
     'promotional_price',
@@ -101,7 +101,6 @@ class ProductProductExporter(NuvemshopExporter):
 class ProductProductExportMapper(NuvemshopExportMapper):
     _model_name = 'nuvemshop.product.product'
     direct = [
-        # ('image_id', 'image_id'),
         ('position', 'position'),
         ('lst_price', 'price'),
         ('promotional_price', 'promotional_price'),
