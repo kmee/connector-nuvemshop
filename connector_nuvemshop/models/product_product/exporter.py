@@ -102,7 +102,7 @@ class ProductProductExportMapper(NuvemshopExportMapper):
     _model_name = 'nuvemshop.product.product'
     direct = [
         ('position', 'position'),
-        ('lst_price', 'price'),
+        ('list_price', 'price'),
         ('promotional_price', 'promotional_price'),
         ('weight', 'weight'),
         ('width', 'width'),
