@@ -48,7 +48,7 @@ def product_product_write(session, model_name, record_id, fields):
     if session.context.get('connector_no_export'):
         return
     if set(fields.keys()) <= set(VARIANT_EXPORT_FIELDS):
-        delay_export_all_bindings(session, model_name, record_id, fields)
+        delay_export_all_bindings(session, model_name, record_id)
 
 
 @on_record_write(model_names='nuvemshop.product.product')
@@ -56,7 +56,7 @@ def nuvemshop_product_product_write(session, model_name, record_id, fields):
     if session.context.get('connector_no_export'):
         return
     if set(fields.keys()) <= set(VARIANT_EXPORT_FIELDS):
-        delay_export(session, model_name, record_id, fields)
+        delay_export(session, model_name, record_id)
 
     model = session.env[model_name]
     record = model.browse(record_id)
@@ -78,7 +78,7 @@ def nuvemshop_product_product_write(session, model_name, record_id, fields):
             )
             if not jobs:
                 export_record.delay(
-                    session, 'nuvemshop.product.template', binding.id, fields
+                    session, 'nuvemshop.product.template', binding.id
                 )
 
 
