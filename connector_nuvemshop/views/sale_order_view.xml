@@ -50,6 +50,7 @@
                             <field name="billing_province"/>
                             <field name="billing_country"/>
                             <field name="shipping_cost_owner"/>
+                            <field name="shipping_cost_customer"/>
                             <field name="subtotal"/>
                             <field name="discount"/>
                             <field name="discount_coupon"/>

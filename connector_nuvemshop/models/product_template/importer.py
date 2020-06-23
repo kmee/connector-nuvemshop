@@ -2,17 +2,18 @@
 # Copyright (C) 2020  Luis Felipe Mileo - KMEE
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-from openerp.addons.connector.exception import MappingError
+from dateutil.parser.isoparser import isoparse
+
+from openerp import fields
+from openerp.addons.connector.exception import MappingError, RetryableJobError
 from openerp.addons.connector.unit.mapper import (
     mapping,
     ImportMapper
 )
 
-from ...unit.importer import TranslatableRecordImporter
+from ..product_category.importer import ProductCategoryImporter
+from ...unit.importer import TranslatableRecordImporter, normalize_datetime
 from ...backend import nuvemshop
-
-from ...unit.importer import import_batch_delayed
-from openerp.addons.connector.session import ConnectorSession
 
 
 @nuvemshop
@@ -26,11 +27,14 @@ class ProductTemplateImportMapper(ImportMapper):
         ('canonical_url', 'canonical_url'),
         ('brand', 'brand'),
         ('seo_title', 'seo_title'),
-        ('published', 'published'),
         ('seo_description', 'seo_description'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
+        (normalize_datetime('created_at'), 'created_at'),
+        (normalize_datetime('updated_at'), 'updated_at'),
     ]
+
+    @mapping
+    def company_id(self, record):
+        return {'company_id': False}
 
     @mapping
     def attributes(self, record):
@@ -84,6 +88,12 @@ class ProductTemplateImportMapper(ImportMapper):
             category_id = self.binder_for(
                 'nuvemshop.product.category').to_openerp(
                 category['id'], unwrap=True).id
+            if not category_id:
+                raise RetryableJobError(
+                    'Product Category not imported yet. The job will be retried later',
+                    seconds=15,
+                    ignore_retry=False
+                )
             product_categories.append(category_id)
 
         return {'categ_ids': [(6, 0, product_categories)]}
@@ -92,7 +102,6 @@ class ProductTemplateImportMapper(ImportMapper):
     def description_html(self, record):
         if record['description']:
             return {'description_html': record['description']}
-
 
     @mapping
     def name(self, record):
@@ -137,6 +146,16 @@ class ProductTemplateImporter(TranslatableRecordImporter):
             'attributes'
         ],
     }
+
+    def _import_dependencies(self):
+        record = self.nuvemshop_record
+        for category in record.get('categories'):
+            self._import_dependency(
+                category.get('id'),
+                'nuvemshop.product.category',
+                ProductCategoryImporter,
+            )
+
 
     def _after_import(self, binding):
         super(ProductTemplateImporter, self)._after_import(binding)

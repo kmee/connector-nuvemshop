@@ -29,6 +29,20 @@ RETRY_ON_ADVISORY_LOCK = 1  # seconds
 RETRY_WHEN_CONCURRENT_DETECTED = 2  # seconds
 
 
+def normalize_datetime(field):
+    """Change a invalid date which comes from Nuvemshop, if
+    no real date is set to null for correct import to
+    OpenERP"""
+
+    def modifier(self, record, to_attr):
+        if record.get(field):
+            clean_date = isoparse(record.get(field)).replace(tzinfo=None)
+            new_date = fields.Datetime.to_string(clean_date)
+            return new_date
+
+    return modifier
+
+
 class NuvemshopImporter(Importer):
     """ Base importer for NuvemshopCommerce """
 
@@ -99,7 +113,7 @@ class NuvemshopImporter(Importer):
         if importer_class is None:
             importer_class = NuvemshopImporter
         binder = self.binder_for(binding_model)
-        if always or binder.to_openerp(nuvemshop_id) is None:
+        if always or not binder.to_openerp(nuvemshop_id):
             importer = self.unit_for(importer_class, model=binding_model)
             importer.run(nuvemshop_id)
 
@@ -115,7 +129,7 @@ class NuvemshopImporter(Importer):
     def _import_parent(self):
         parent_id = self.nuvemshop_record.get(self._parent_field)
         if parent_id:
-            if self.binder.to_openerp(parent_id) is None:
+            if self.binder.to_openerp(parent_id) in (None, False):
                 importer = self.unit_for(NuvemshopImporter)
                 importer.run(parent_id)
 
@@ -251,6 +265,8 @@ class NuvemshopImporter(Importer):
 
         if not kwargs.get('force') and self._is_uptodate(binding):
             return _('Already up-to-date.')
+
+        self._before_import()
 
         self._import_dependencies()
         self._import(binding, **kwargs)

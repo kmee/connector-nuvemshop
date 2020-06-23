@@ -19,7 +19,7 @@ from ...backend import nuvemshop
 
 
 VARIANT_EXPORT_FIELDS = [
-    'image_id',
+    'nuvemshop_image_id',
     'position',
     'list_price',
     'promotional_price',
@@ -48,7 +48,7 @@ def product_product_write(session, model_name, record_id, fields):
     if session.context.get('connector_no_export'):
         return
     if set(fields.keys()) <= set(VARIANT_EXPORT_FIELDS):
-        delay_export_all_bindings(session, model_name, record_id, fields)
+        delay_export_all_bindings(session, model_name, record_id)
 
 
 @on_record_write(model_names='nuvemshop.product.product')
@@ -56,7 +56,7 @@ def nuvemshop_product_product_write(session, model_name, record_id, fields):
     if session.context.get('connector_no_export'):
         return
     if set(fields.keys()) <= set(VARIANT_EXPORT_FIELDS):
-        delay_export(session, model_name, record_id, fields)
+        delay_export(session, model_name, record_id)
 
     model = session.env[model_name]
     record = model.browse(record_id)
@@ -78,7 +78,7 @@ def nuvemshop_product_product_write(session, model_name, record_id, fields):
             )
             if not jobs:
                 export_record.delay(
-                    session, 'nuvemshop.product.template', binding.id, fields
+                    session, 'nuvemshop.product.template', binding.id
                 )
 
 
@@ -101,9 +101,8 @@ class ProductProductExporter(NuvemshopExporter):
 class ProductProductExportMapper(NuvemshopExportMapper):
     _model_name = 'nuvemshop.product.product'
     direct = [
-        ('image_id', 'image_id'),
         ('position', 'position'),
-        ('lst_price', 'price'),
+        ('list_price', 'price'),
         ('promotional_price', 'promotional_price'),
         ('weight', 'weight'),
         ('width', 'width'),
@@ -111,22 +110,34 @@ class ProductProductExportMapper(NuvemshopExportMapper):
         ('depth', 'depth'),
         ('default_code', 'sku'),
         ('ean13', 'barcode'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
     ]
+
+    @mapping
+    def image_id(self, record):
+        if record.nuvemshop_image_id:
+            return {
+                'image_id': record.nuvemshop_image_id.nuvemshop_id
+            }
 
     @mapping
     def stock_management(self, record):
         if record['stock_management']:
-            return {'stock_management': record['stock_management']}
+            return {
+                'stock_management': record['stock_management']
+            }
 
     @mapping
     def product_id(self, record):
         if record['main_template_id']:
-            return {'product_id': record.main_template_id.nuvemshop_id}
+            return {
+                'product_id': record.main_template_id.nuvemshop_id
+            }
 
     @mapping
     def values(self, record):
         if record['attribute_value_ids']:
-            return {'values': [
-                dict(pt=val.name) for val in record['attribute_value_ids']]}
+            return {
+                'values': [
+                    dict(pt=val.name) for val in record['attribute_value_ids']
+                ]
+            }
