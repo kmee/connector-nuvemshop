@@ -78,12 +78,36 @@ class NuvemshopSaleOrder(models.Model):
     next_action = fields.Char()
     cancel_reason = fields.Char()
     owner_note = fields.Char()
-    cancelled_at = fields.Char()
-    closed_at = fields.Char()
-    read_at = fields.Char()
-    status = fields.Char()
-    payment_status = fields.Char()
-    shipping_status = fields.Char()
+    cancelled_at = fields.Datetime()
+    closed_at = fields.Datetime()
+    read_at = fields.Datetime()
+    status = fields.Selection(
+        string="",
+        selection=[
+            ('open', 'Open'),
+            ('closed', 'Closed'),
+            ('canceled', 'Canceled'),
+        ]
+    )
+    payment_status = fields.Selection(
+        string="",
+        selection=[
+            ('authorized', 'Authorized'),
+            ('pending', 'Pending'),
+            ('paid', 'Paid'),
+            ('abandoned', 'Abandoned'),
+            ('refunded', 'Refunded'),
+            ('voided', 'Voided'),
+        ]
+    )
+    shipping_status = fields.Selection(
+        string="",
+        selection=[
+            ('unpacked', 'Unpacked'),
+            ('shipped', 'Shipped'),
+            ('unshipped', 'Unshipped'),
+        ]
+    )
     shipped_at = fields.Datetime()
     paid_at = fields.Datetime()
     landing_url = fields.Char()
