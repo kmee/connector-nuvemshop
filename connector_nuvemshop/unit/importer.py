@@ -266,6 +266,8 @@ class NuvemshopImporter(Importer):
         if not kwargs.get('force') and self._is_uptodate(binding):
             return _('Already up-to-date.')
 
+        self._before_import()
+
         self._import_dependencies()
         self._import(binding, **kwargs)
 

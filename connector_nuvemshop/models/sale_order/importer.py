@@ -4,10 +4,15 @@
 
 import logging
 
+import datetime
+from datetime import timedelta
+from dateutil.parser.isoparser import isoparse
+
 from openerp.addons.connector.exception import (
     RetryableJobError,
     FailedJobError,
-    MappingError
+    MappingError,
+    NothingToDoJob
 )
 
 from openerp import fields
@@ -17,6 +22,8 @@ from openerp.addons.connector.unit.mapper import (
     ImportMapper
 )
 
+from openerp.addons.connector.connector import ConnectorUnit
+
 from ..res_partner.importer import ResPartnerImporter
 from ..product_template.importer import ProductTemplateImporter
 from ...unit.importer import NuvemshopImporter, normalize_datetime
@@ -24,6 +31,89 @@ from ...backend import nuvemshop
 from ...unit.backend_adapter import GenericAdapter
 
 _logger = logging.getLogger(__name__)
+
+
+@nuvemshop
+class SaleImportRule(ConnectorUnit):
+    _model_name = ['nuvemshop.sale.order']
+
+    def _rule_always(self, record, method):
+        """ Always import the order """
+        return True
+
+    def _rule_never(self, record, method):
+        """ Never import the order """
+        raise NothingToDoJob('Orders with payment method %s '
+                             'are never imported.' %
+                             record['gateway'])
+
+    def _rule_authorized(self, record, method):
+        """ Import the order only if payment has been authorized. """
+        if record.get('gateway') != 'offline' and \
+                record.get('payment_status') not in ['authorized', 'paid']:
+            raise RetryableJobError(
+                'The order has not been authorized.\n'
+                'The import will be retried later.',
+                seconds=60*60,
+                ignore_retry=True
+            )
+
+    def _rule_paid(self, record, method):
+        """ Import the order only if it has received a payment """
+        if not record.get('payment_status') == 'paid':
+            raise RetryableJobError(
+                'The order has not been paid.\n'
+                'The import will be retried later.',
+                seconds=60*60,
+                ignore_retry=True
+            )
+
+    _rules = {
+        'always': _rule_always,
+        'paid': _rule_paid,
+        'authorized': _rule_authorized,
+        'never': _rule_never,
+    }
+
+    def _rule_global(self, record, method):
+        """ Rule always executed, whichever is the selected rule """
+        # the order has been canceled since the job has been created
+        order_number = record['number']
+        if record['status'] == 'cancelled':
+            raise NothingToDoJob('Order %s canceled' % order_number)
+        max_days = method.days_before_cancel
+        if max_days:
+            order_date = isoparse(record.get('created_at')).replace(tzinfo=None)
+            if order_date + timedelta(days=max_days) < datetime.datetime.now():
+                raise NothingToDoJob('Import of the order %s canceled '
+                                     'because it has not been paid since %d '
+                                     'days' % (order_number, max_days))
+
+    def check(self, record):
+        """ Check whether the current sale order should be imported
+        or not. It will actually use the payment method configuration
+        and see if the choosed rule is fullfilled.
+
+        :returns: True if the sale order should be imported
+        :rtype: boolean
+        """
+        payment_method = record['gateway']
+        method = self.env['payment.method'].search(
+            [('name', '=', payment_method)],
+            limit=1,
+        )
+        if not method:
+            raise FailedJobError(
+                "The configuration is missing for the Payment Method '%s'.\n\n"
+                "Resolution:\n"
+                "- Go to "
+                "'Sales > Configuration > Sales > Customer Payment Method\n"
+                "- Create a new Payment Method with name '%s'\n"
+                "-Eventually  link the Payment Method to an existing Workflow "
+                "Process or create a new one." % (payment_method,
+                                                  payment_method))
+        self._rule_global(record, method)
+        self._rules[method.import_rule](self, record, method)
 
 
 @nuvemshop
@@ -126,6 +216,22 @@ class SaleOrderImportMapper(ImportMapper):
             )
             children.extend(items)
         return children
+
+    @mapping
+    def payment(self, record):
+        if record.get('gateway'):
+            method = self.env['payment.method'].search([
+                ('name', '=', record['gateway']),
+            ], limit=1)
+            assert method, ("Payment method '%s' has not been found ; "
+                            "you should create it manually (in Sales->"
+                            "Configuration->Sales->Payment Methods" %
+                            record['gateway'])
+            return {
+                'payment_method_id': method.id,
+                'workflow_process_id': method.workflow_process_id.id
+            }
+
 
     @mapping
     def partner_id(self, record):
@@ -247,6 +353,10 @@ class SaleOrderImporter(NuvemshopImporter):
                 'nuvemshop.product.template',
                 ProductTemplateImporter,
             )
+
+    def _before_import(self):
+        rules = self.unit_for(SaleImportRule)
+        rules.check(self.nuvemshop_record)
 
     def _after_import(self, binding):
         super(SaleOrderImporter, self)._after_import(binding)
