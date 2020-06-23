@@ -37,6 +37,34 @@ class ProductProduct(models.Model):
                     image_record.sequence = 0
         return
 
+    @api.multi
+    def update_nuvemshop_qty(self):
+        for product in self:
+            if product.product_variant_count == 1:
+                # Recompute qty in template binding if product has not
+                # combinations
+                product.product_tmpl_id.update_nuvemshop_quantities()
+            elif product.product_variant_count > 1:
+                # Recompute qty in combination binding
+                for combination_binding in product.nuvemshop_bind_ids:
+                    combination_binding.recompute_nuvemshop_qty()
+
+    @api.multi
+    def update_nuvemshop_quantities(self):
+        for product in self:
+            product_template = product.product_tmpl_id
+            nuvemshop_combinations = (
+                len(product_template.product_variant_ids) > 1 and
+                product_template.product_variant_ids) or []
+            if not nuvemshop_combinations:
+                for nuvemshop_product in product_template.nuvemshop_bind_ids:
+                    nuvemshop_product.recompute_nuvemshop_qty()
+            else:
+                for nuvemshop_combination in nuvemshop_combinations:
+                    for combination_binding in \
+                            nuvemshop_combination.nuvemshop_bind_ids:
+                        combination_binding.recompute_nuvemshop_qty()
+        return True
 
 class NuvemshopProductProduct(models.Model):
     _name = 'nuvemshop.product.product'
@@ -89,9 +117,20 @@ class NuvemshopProductProduct(models.Model):
         string="Values"
     )
 
-    stock = fields.Char(
+    stock = fields.Float(
         string="Stock"
     )
+
+    @api.multi
+    def recompute_nuvemshop_qty(self):
+        for product_binding in self:
+            locations = product_binding.backend_id.get_stock_locations()
+            qty_available = product_binding.with_context(
+                location=locations.ids).qty_available
+            qty = qty_available - product_binding.outgoing_qty # - 3 # Security Quantity???
+            if product_binding.stock != qty:
+                product_binding.stock = qty if qty >= 0.0 else 0.0
+        return True
 
     @api.onchange('name')
     def _onchange_name(self):
