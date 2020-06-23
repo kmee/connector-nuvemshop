@@ -4,8 +4,11 @@
 
 import logging
 from openerp import api, models, fields
+from openerp.addons.connector.session import ConnectorSession
+
 from ...unit.backend_adapter import GenericAdapter
 from ...backend import nuvemshop
+from .exporter import export_state_change, ORDER_COMMAND_MAPPING
 
 _logger = logging.getLogger(__name__)
 
@@ -18,6 +21,46 @@ class SaleOrder(models.Model):
         inverse_name='openerp_id',
         string="Nuvemshop Bindings",
     )
+
+    @api.one
+    @api.depends('nuvemshop_bind_ids', 'nuvemshop_bind_ids.nuvemshop_parent_id')
+    def get_parent_id(self):
+        """ Return the parent order.
+
+        For Nuvemshop sales orders, the nuvemshop parent order is stored
+        in the binding, get it from there.
+        """
+        super(SaleOrder, self).get_parent_id()
+        for order in self:
+            if not order.nuvemshop_bind_ids:
+                continue
+            # assume we only have 1 SO in OpenERP for 1 SO in Nuvemshop
+            nuvemshop_order = order.nuvemshop_bind_ids[0]
+            if nuvemshop_order.nuvemshop_parent_id:
+                self.parent_id = nuvemshop_order.nuvemshop_parent_id.openerp_id
+
+    @api.multi
+    def copy_quotation(self):
+        self_copy = self.with_context(__copy_from_quotation=True)
+        result = super(SaleOrder, self_copy).copy_quotation()
+        # link binding of the canceled order to the new order, so the
+        # operations done on the new order will be sync'ed with Nuvemshop
+        new_id = result['res_id']
+        binding_model = self.env['nuvemshop.sale.order']
+        bindings = binding_model.search([('openerp_id', '=', self.id)])
+        bindings.write({'openerp_id': new_id})
+        session = ConnectorSession(self.env.cr, self.env.uid,
+                                   context=self.env.context)
+        for binding in bindings:
+            # the sales' status on Nuvemshop is likely 'canceled'
+            # so we will export the new status (pending, processing, ...)
+            export_state_change.delay(
+                session,
+                'nuvemshop.sale.order',
+                binding.id,
+                command=ORDER_COMMAND_MAPPING[binding.state]
+            )
+        return result
 
 
 class NuvemshopSaleOrder(models.Model):
@@ -37,6 +80,8 @@ class NuvemshopSaleOrder(models.Model):
         inverse_name='nuvemshop_order_id',
         string='Nuvemshop Order Lines',
     )
+    nuvemshop_parent_id = fields.Many2one(comodel_name='nuvemshop.sale.order',
+                                        string='Parent Nuvemshop Order')
 
     token = fields.Char()
     store_id = fields.Char()
@@ -118,8 +163,6 @@ class NuvemshopSaleOrder(models.Model):
     payment_details_installments = fields.Char()
     client_details_browser_ip = fields.Char()
     client_details_user_agent = fields.Char()
-
-
 
 
 @nuvemshop
