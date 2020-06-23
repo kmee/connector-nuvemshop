@@ -19,7 +19,7 @@
         'product_multi_image',
     ],
     'data': [
-        # 'security/nuvemshop_res_partner.xml',
+        'security/ir.model.access.csv',
 
         'wizards/wizard_nuvemshop_product_category.xml',
         'wizards/wizard_nuvemshop_product_template.xml',
