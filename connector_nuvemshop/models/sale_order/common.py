@@ -120,10 +120,16 @@ class NuvemshopSaleOrder(models.Model):
     client_details_user_agent = fields.Char()
 
 
+
+
 @nuvemshop
 class SaleOrderAdapter(GenericAdapter):
     _model_name = 'nuvemshop.sale.order'
     _nuvemshop_model = 'orders'
+
+    def sale_order_command(self, id, command, data=None):
+        #TODO: call API
+        print ("Comando: %s" % command)
 
 
 class SaleOrderLine(models.Model):
