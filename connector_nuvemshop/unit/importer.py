@@ -35,9 +35,10 @@ def normalize_datetime(field):
     OpenERP"""
 
     def modifier(self, record, to_attr):
-        clean_date = isoparse(record.get(field)).replace(tzinfo=None)
-        new_date = fields.Datetime.to_string(clean_date)
-        return new_date
+        if record.get(field):
+            clean_date = isoparse(record.get(field)).replace(tzinfo=None)
+            new_date = fields.Datetime.to_string(clean_date)
+            return new_date
 
     return modifier
 
