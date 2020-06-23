@@ -26,9 +26,12 @@ def delay_export_tracking_number(session, model_name, record_id):
     if not sale:
         return
     data = {
-        'shipping_tracking_number': picking.carrier_tracking_ref,
-        'shipping_tracking_url': picking.shipping_tracking_url
+        'shipping_tracking_number': picking.carrier_tracking_ref
     }
+    if picking.shipping_tracking_url:
+        data.update({
+            'shipping_tracking_url': picking.shipping_tracking_url
+        })
     for nuvemshop_sale in sale.nuvemshop_bind_ids:
         export_state_change.delay(
             session, 'nuvemshop.sale.order', nuvemshop_sale.id, command='fulfill',
