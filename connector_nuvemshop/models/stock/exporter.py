@@ -31,7 +31,7 @@ def delay_export_tracking_number(session, model_name, record_id):
     }
     for nuvemshop_sale in sale.nuvemshop_bind_ids:
         export_state_change.delay(
-            session, 'nuvemshop.sale.order', nuvemshop_sale.id, command='fullfill',
+            session, 'nuvemshop.sale.order', nuvemshop_sale.id, command='fulfill',
             data=data
         )
 
