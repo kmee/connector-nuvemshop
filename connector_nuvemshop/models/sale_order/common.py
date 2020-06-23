@@ -98,6 +98,7 @@ class NuvemshopSaleOrder(models.Model):
     billing_province = fields.Char()
     billing_country = fields.Char()
     shipping_cost_owner = fields.Float()
+    shipping_cost_customer = fields.Float()
     subtotal = fields.Float()
     discount = fields.Float()
     discount_coupon = fields.Float()

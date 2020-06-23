@@ -28,6 +28,7 @@ from ..res_partner.importer import ResPartnerImporter
 from ..product_template.importer import ProductTemplateImporter
 from ...unit.importer import NuvemshopImporter, normalize_datetime
 from ...backend import nuvemshop
+from ...connector import add_checkpoint
 from ...unit.backend_adapter import GenericAdapter
 
 _logger = logging.getLogger(__name__)
@@ -307,6 +308,25 @@ class SaleOrderImportMapper(ImportMapper):
             }
 
     @mapping
+    def amount_freight(self, record):
+        if record.get('shipping_cost_customer'):
+            return {
+                'amount_freight': float(record.get('shipping_cost_customer')),
+                'shipping_cost_customer': record.get('shipping_cost_customer')
+            }
+
+    @mapping
+    def delivery_carrier(self, record):
+        if record.get('shipping_option'):
+            carrier = self.env['delivery.carrier'].search(
+                [('name', 'ilike', record['shipping_option'])]
+            )
+            if carrier:
+                return {
+                    'carrier_id': carrier.id
+                }
+
+    @mapping
     def client_details_browser_ip(self, record):
         if record['client_details']:
             client_details_browser_ip = record['client_details']['browser_ip']
@@ -358,8 +378,24 @@ class SaleOrderImporter(NuvemshopImporter):
         rules = self.unit_for(SaleImportRule)
         rules.check(self.nuvemshop_record)
 
+    def _set_freight(self, binding):
+        if self.nuvemshop_record.get('shipping_cost_customer'):
+            binding.amount_freight = self.nuvemshop_record['shipping_cost_customer']
+
+
+    def _check_shipping_data(self, binding):
+        if binding.carrier_id.name != self.nuvemshop_record['shipping_option']:
+            add_checkpoint(
+                self.session,
+                'sale.order',
+                binding.openerp_id,
+                self.backend_id.id
+            )
+
     def _after_import(self, binding):
         super(SaleOrderImporter, self)._after_import(binding)
+        self._set_freight(binding)
+        self._check_shipping_data(binding)
         binding.openerp_id.onchange_fiscal()
         for line in binding.openerp_id.order_line:
             line.onchange_fiscal()
