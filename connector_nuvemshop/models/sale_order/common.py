@@ -171,8 +171,11 @@ class SaleOrderAdapter(GenericAdapter):
     _nuvemshop_model = 'orders'
 
     def sale_order_command(self, id, command, data=None):
-        #TODO: call API
-        print ("Comando: %s" % command)
+        """ Update records on the external system """
+        if data == None:
+            data = {}
+        data['id'] = id
+        return self.store[self._nuvemshop_model].command(data, command=command)
 
 
 class SaleOrderLine(models.Model):

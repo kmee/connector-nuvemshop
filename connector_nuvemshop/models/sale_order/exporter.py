@@ -12,9 +12,9 @@ from ...connector import get_environment
 from ...unit.exporter import NuvemshopExporter
 
 ORDER_COMMAND_MAPPING = {
-    # 'draft': 'pending',
+    'draft': 'open',
     # 'manual': 'processing',
-    # 'progress': 'processing',
+    'progress': 'open',
     # 'shipping_except': 'processing',
     # 'invoice_except': 'processing',
     # 'done': 'complete',
@@ -43,15 +43,16 @@ def sale_order_write(session, model_name, record_id, fields):
 class SaleStatusExporter(NuvemshopExporter):
     _model_name = ['nuvemshop.sale.order']
 
-    def run(self, binding_id, command):
-        self.backend_adapter.sale_order_command(binding_id, command)
+    def run(self, binding_id, command, data=None):
+        self.backend_adapter.sale_order_command(binding_id, command, data=data)
 
 
 @job(default_channel='root.nuvemshop')
-def export_state_change(session, model_name, binding_id, command):
+def export_state_change(session, model_name, binding_id, command, data=None):
     """ Change state of a sales order on Nuvemshop """
     binding = session.env[model_name].browse(binding_id)
+    nuvemshop_id = binding.nuvemshop_id
     backend_id = binding.backend_id.id
     env = get_environment(session, model_name, backend_id)
     exporter = env.get_connector_unit(SaleStatusExporter)
-    return exporter.run(binding_id, command)
+    return exporter.run(nuvemshop_id, command, data=data)
