@@ -5,10 +5,7 @@
 import logging
 from openerp import api, models, fields
 from ...unit.backend_adapter import GenericAdapter
-from openerp.addons.connector.session import ConnectorSession
 from ...backend import nuvemshop
-from ...unit.importer import import_batch_delayed
-
 
 _logger = logging.getLogger(__name__)
 
@@ -24,18 +21,11 @@ class ProductProduct(models.Model):
 
     @api.multi
     def import_variant_image_nuvemshop(self):
-        # session = ConnectorSession(self.env.cr, self.env.uid,
-        #                            context=self.env.context)
         for record in self:
             for bind in record.nuvemshop_variants_bind_ids:
-                if bind.image_id:
-                    image_record = record.nuvemshop_bind_ids.mapped(
-                        'image_ids').mapped('nuvemshop_bind_ids').filtered(
-                        lambda x: str(bind.image_id) in x.nuvemshop_id
-                    )
+                if bind.nuvemshop_image_id:
+                    image_record = bind.nuvemshop_image_id
                     image_record.product_variant_ids += record
-                    image_record.sequence = 0
-        return
 
     @api.multi
     def update_nuvemshop_qty(self):
@@ -85,8 +75,9 @@ class NuvemshopProductProduct(models.Model):
         ondelete='cascade',
     )
 
-    image_id = fields.Char(
-        string="Image"
+    nuvemshop_image_id = fields.Many2one(
+        comodel_name='nuvemshop.product.image',
+        string='Image Record'
     )
 
     position = fields.Char(

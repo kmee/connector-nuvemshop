@@ -39,7 +39,7 @@ TEMPLATE_EXPORT_FIELDS = [
     # 'updated_at',
     'product_variant_ids',
     'tags',
-    'image_ids',
+    # 'image_ids',
     'categ_ids',
     'categ_id',
     'remote_available',
@@ -71,18 +71,19 @@ def product_template_write(session, model_name, record_id, fields):
         return
     model = session.env[model_name]
     record = model.browse(record_id)
-    for binding in record.nuvemshop_bind_ids:
-        func = "openerp.addons.connector_nuvemshop.unit.exporter." \
-               "export_record('nuvemshop.product.template', %s," \
-               % binding.id
-        jobs = session.env['queue.job'].sudo().search(
-            [('func_string', 'like', "%s%%" % func),
-             ('state', 'not in', ['done', 'failed'])]
-        )
-        if not jobs:
-            export_record.delay(
-                session, 'nuvemshop.product.template', binding.id, fields
+    if set(fields.keys()) <= set(TEMPLATE_EXPORT_FIELDS):
+        for binding in record.nuvemshop_bind_ids:
+            func = "openerp.addons.connector_nuvemshop.unit.exporter." \
+                   "export_record('nuvemshop.product.template', %s," \
+                   % binding.id
+            jobs = session.env['queue.job'].sudo().search(
+                [('func_string', 'like', "%s%%" % func),
+                 ('state', 'not in', ['done', 'failed'])]
             )
+            if not jobs:
+                export_record.delay(
+                    session, 'nuvemshop.product.template', binding.id
+                )
 
 
 
@@ -91,7 +92,7 @@ def nuvemshop_product_template_write(session, model_name, record_id, fields):
     if session.context.get('connector_no_export'):
         return
     if set(fields.keys()) <= set(TEMPLATE_EXPORT_FIELDS):
-        delay_export(session, model_name, record_id, fields)
+        delay_export(session, model_name, record_id)
 
 @job(default_channel='root.nuvemshop')
 def export_product_quantities(session, ids):
@@ -125,7 +126,30 @@ class ProductTemplateExporter(TranslationNuvemshopExporter):
         return self.backend_adapter.write(self.nuvemshop_id, data)
 
     def _after_export(self):
+        self.export_images()
         self.export_variants()
+
+    def export_images(self):
+        image_obj = self.session.env['nuvemshop.product.image']
+
+        for index, image in enumerate(self.erp_record.image_ids):
+            image_ext_id = image_obj.search([
+                ('backend_id', '=', self.backend_record.id),
+                ('openerp_id', '=', image.id),
+            ])
+            if not image_ext_id:
+                image_ext_id = image_obj.with_context(
+                    connector_no_export=True).create({
+                    'backend_id': self.backend_record.id,
+                    'openerp_id': image.id,
+                    'nuvemshop_product_id': self.binding_id,
+                })
+            export_record.delay(
+                self.session,
+                'nuvemshop.product.image',
+                image_ext_id.id, priority=50,
+                eta=timedelta(seconds=10 + (index * 2))
+            )
 
     def export_variants(self):
         variant_obj = self.session.env['nuvemshop.product.product']
@@ -145,7 +169,7 @@ class ProductTemplateExporter(TranslationNuvemshopExporter):
             export_record.delay(
                 self.session,
                 'nuvemshop.product.product',
-                variant_ext_id.id, priority=50,
+                variant_ext_id.id, priority=70,
                 eta=timedelta(seconds=10 + (index * 2))
             )
 
@@ -163,8 +187,6 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
         ('seo_description', 'seo_description'),
         ('brand', 'brand'),
         ('published', 'published'),
-        # ('created_at', 'created_at'),
-        # ('updated_at', 'updated_at'),
         # ('variants', 'variants'),
         # ('tags', 'tags'),
         # ('images', 'images'),
@@ -186,70 +208,6 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
                 'attributes': attributes
             }
 
-
-    # @only_create
-    # @mapping
-    # def variants(self, record):
-    #     variants = []
-    #     if record.product_variant_ids:
-    #         variant_obj = self.session.env['nuvemshop.product.product']
-    #         env = get_environment(
-    #             self.session,
-    #             'nuvemshop.product.product',
-    #             self.backend_record.id
-    #         )
-    #         mapper = ProductProductExportMapper(env)
-    #         if len(record.product_variant_ids) > 1:
-    #             for variant in record.product_variant_ids:
-    #                 if variant.nuvemshop_variants_bind_ids:
-    #                     map_record = mapper.map_record(
-    #                         variant.nuvemshop_variants_bind_ids
-    #                     )
-    #                     output_values = map_record.values()
-    #                     variants.append(output_values)
-    #                 else:
-    #                     variant = variant_obj.with_context(
-    #                         connector_no_export=True).create({
-    #                         'backend_id': self.backend_record.id,
-    #                         'openerp_id': variant.id,
-    #                         'main_template_id': record.id,
-    #                     })
-    #                     map_record = mapper.map_record(variant)
-    #                     output_values = map_record.values()
-    #                     variants.append(output_values)
-    #         elif len(record.product_variant_ids) == 1:
-    #             variant = record.product_variant_ids
-    #             if variant.nuvemshop_variants_bind_ids:
-    #                 ns_variant = variant.nuvemshop_variants_bind_ids
-    #                 variants = [
-    #                     {
-    #                         'price': ns_variant.list_price,
-    #                         'stock_management': ns_variant.stock_management,
-    #                         'weight': str(ns_variant.weight),
-    #                         'sku': ns_variant.default_code
-    #                     }
-    #                 ]
-    #                 if variants[0]['stock_management']:
-    #                     variants.update({'stock': 0})
-    #             else:
-    #                 variant = variant_obj.with_context(
-    #                     connector_no_export=True).create({
-    #                     'backend_id': self.backend_record.id,
-    #                     'openerp_id': variant.id,
-    #                     'main_template_id': record.id,
-    #                 })
-    #                 variants = [
-    #                     {
-    #                         'price': str(variant.list_price),
-    #                         'stock_management': variant.stock_management,
-    #                         'weight': str(variant.weight),
-    #                     }
-    #                 ]
-    #                 if variants[0]['stock_management']:
-    #                     variants.update({'stock': 0})
-    #
-    #     return {'variants': variants}
-
     @mapping
     def description(self, record):
         if record.description_html:
@@ -258,20 +216,6 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
             return{'description': record.description}
         else:
             return{'description': ' '}
-
-    @mapping
-    def images(self, record):
-        images = []
-        for image in record.image_ids:
-            if image.url:
-                images.append(
-                    {
-                        'src': image.url,
-                        'name': image.name,
-                        'position': image.sequence
-                    }
-                )
-        return {'images': images}
 
     @mapping
     def categories(self, record):

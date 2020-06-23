@@ -7,7 +7,7 @@ from openerp.addons.connector.unit.mapper import (
     ImportMapper
 )
 
-from ...unit.importer import NuvemshopImporter
+from ...unit.importer import NuvemshopImporter, normalize_datetime
 from ...backend import nuvemshop
 
 
@@ -28,8 +28,8 @@ class ResPartnerImportMapper(ImportMapper):
         ('total_spent', 'total_spent'),
         ('total_spent_currency', 'total_spent_currency'),
         ('last_order_id', 'last_order_id'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
+        (normalize_datetime('created_at'), 'created_at'),
+        (normalize_datetime('updated_at'), 'updated_at'),
         ('active', 'active'),
         ('note', 'comment'),
     ]

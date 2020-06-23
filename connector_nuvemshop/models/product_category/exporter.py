@@ -36,7 +36,7 @@ def product_category_write(session, model_name, record_id, fields):
     if session.context.get('connector_no_export'):
         return
     if set(fields.keys()) <= set(CATEGORY_EXPORT_FIELDS):
-        delay_export_all_bindings(session, model_name, record_id, fields)
+        delay_export_all_bindings(session, model_name, record_id)
 
 
 @on_record_write(model_names='nuvemshop.product.category')
@@ -60,8 +60,6 @@ class ProductCategoryExportMapper(TranslationNuvemshopExportMapper):
         ('handle', 'handle'),
         ('seo_title', 'seo_title'),
         ('seo_description', 'seo_description'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
     ]
 
     _translatable_fields = {

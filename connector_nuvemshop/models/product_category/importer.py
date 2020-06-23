@@ -8,7 +8,7 @@ from openerp.addons.connector.unit.mapper import (
     ImportMapper
 )
 
-from ...unit.importer import TranslatableRecordImporter
+from ...unit.importer import TranslatableRecordImporter, normalize_datetime
 from ...backend import nuvemshop
 
 
@@ -21,8 +21,8 @@ class ProductCategoryImportMapper(ImportMapper):
         ('handle', 'handle'),
         ('seo_title', 'seo_title'),
         ('seo_description', 'seo_description'),
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
+        (normalize_datetime('created_at'), 'created_at'),
+        (normalize_datetime('updated_at'), 'updated_at'),
     ]
 
     @mapping

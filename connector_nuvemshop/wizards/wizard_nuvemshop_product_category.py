@@ -36,5 +36,4 @@ class WizardNuvemshopProductCategory(models.TransientModel):
                         'handle': nuvemshop_category_obj._handle_name(
                             category.name),
                         'openerp_id': category.id,
-                        'openerp_id': category.id,
                     })

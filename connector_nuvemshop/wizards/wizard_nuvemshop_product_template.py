@@ -36,5 +36,5 @@ class WizardNuvemshopProductTemplate(models.TransientModel):
                         'handle': nuvemshop_template_obj._handle_name(
                             template.name),
                         'openerp_id': template.id,
-                        'openerp_id': template.id,
+                        'published': True,
                     })
