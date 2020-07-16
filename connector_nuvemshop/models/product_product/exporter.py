@@ -24,7 +24,6 @@ VARIANT_EXPORT_FIELDS = [
     'list_price',
     'promotional_price',
     'stock_management',
-    'stock',
     'weight',
     'width',
     'height',
@@ -34,6 +33,9 @@ VARIANT_EXPORT_FIELDS = [
     # 'name',
     'attribute_value_ids',
 ]
+
+# TODO: - Corrigir exportaçao de value (atributo da variante)
+#       - Sincronizaçao ao criar novo atributo ou nova variante no odoo
 
 
 @on_record_create(model_names='nuvemshop.product.product')

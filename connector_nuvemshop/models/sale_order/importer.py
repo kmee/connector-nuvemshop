@@ -33,6 +33,9 @@ from ...unit.backend_adapter import GenericAdapter
 
 _logger = logging.getLogger(__name__)
 
+# TODO: - refatorar estados para poder cancelar e retornar estoque
+#       - rateio do frete
+
 
 @nuvemshop
 class SaleImportRule(ConnectorUnit):

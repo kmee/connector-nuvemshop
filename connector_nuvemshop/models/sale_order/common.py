@@ -23,7 +23,8 @@ class SaleOrder(models.Model):
     )
 
     @api.one
-    @api.depends('nuvemshop_bind_ids', 'nuvemshop_bind_ids.nuvemshop_parent_id')
+    @api.depends('nuvemshop_bind_ids',
+                 'nuvemshop_bind_ids.nuvemshop_parent_id')
     def get_parent_id(self):
         """ Return the parent order.
 

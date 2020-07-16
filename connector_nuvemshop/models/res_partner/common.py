@@ -39,4 +39,3 @@ class NuvemshopResPartner(models.Model):
 class CategoryAdapter(GenericAdapter):
     _model_name = 'nuvemshop.res.partner'
     _nuvemshop_model = 'customers'
-

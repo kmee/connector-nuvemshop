@@ -14,6 +14,9 @@ from ...unit.importer import TranslatableRecordImporter, normalize_datetime
 from ...backend import nuvemshop
 
 
+# TODO: - COrrigir importaçao de atributo da variante
+#       - Sincronizaçao ao criar novo atributo ou nova variante no nuvemshop
+
 @nuvemshop
 class ProductProductImportMapper(ImportMapper):
     _model_name = 'nuvemshop.product.product'
@@ -31,6 +34,7 @@ class ProductProductImportMapper(ImportMapper):
         ('barcode', 'ean13'),
         (normalize_datetime('created_at'), 'created_at'),
         (normalize_datetime('updated_at'), 'updated_at'),
+        ('stock', 'stock'),
     ]
 
     @mapping

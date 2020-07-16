@@ -36,10 +36,10 @@ class ResPartnerImportMapper(ImportMapper):
 
     @mapping
     def name(self, record):
-        if record['billing_name']:
-            return {'name': record['billing_name']}
-        else:
+        if record['name']:
             return {'name': record['name']}
+        else:
+            return {'name': record['billing_name']}
 
     @mapping
     def country_id(self, record):
