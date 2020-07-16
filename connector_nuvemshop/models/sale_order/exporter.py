@@ -10,6 +10,7 @@ from openerp.addons.connector.queue.job import job
 from ...backend import nuvemshop
 from ...connector import get_environment
 from ...unit.exporter import NuvemshopExporter
+from ...unit.importer import NuvemshopImporter
 
 ORDER_COMMAND_MAPPING = {
     'draft': 'open',
@@ -44,7 +45,12 @@ class SaleStatusExporter(NuvemshopExporter):
     _model_name = ['nuvemshop.sale.order']
 
     def run(self, binding_id, command, data=None):
-        self.backend_adapter.sale_order_command(binding_id, command, data=data)
+        nuvemshop_record = self.backend_adapter.sale_order_command(
+            binding_id, command, data=data
+        )
+        if nuvemshop_record:
+            Importer = NuvemshopImporter()
+            Importer._update(binding_id, nuvemshop_record)
 
 
 @job(default_channel='root.nuvemshop')

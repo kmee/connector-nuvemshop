@@ -222,6 +222,26 @@ class NuvemShopBackend(models.Model):
             for product_id in products:
                 backend.import_image(product_id)
         return True
+
+    @api.multi
+    def get_stock_locations(self):
+        self.ensure_one()
+        locations = self.env['stock.location'].search([
+            ('id', 'child_of', self.stock_location_id.id or
+             self.warehouse_id.lot_stock_id.id),
+            ('nuvemshop_synchronized', '=', True),
+            ('usage', '=', 'internal'),
+        ])
+        return locations
+
+    @api.multi
+    def update_product_stock_qty(self):
+        session = ConnectorSession(
+            self.env.cr, self.env.uid, context=self.env.context)
+        for backend_record in self:
+            export_product_quantities.delay(session, backend_record.id)
+        return True
+
     @api.model
     def _scheduler_import_sale_orders(self, domain=None):
         self.search(domain or []).import_orders()

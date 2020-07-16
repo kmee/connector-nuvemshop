@@ -2,21 +2,24 @@
 # Copyright (C) 2020  Gabriel Cardoso de Faria - KMEE
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-from ...unit.exporter import delay_export, export_record
 from openerp.addons.connector.event import on_record_create, on_record_write
-
+from openerp.addons.connector.queue.job import job
+from openerp.addons.connector.unit.synchronizer import ExportSynchronizer
 from openerp.addons.connector.unit.mapper import (
     mapping,
     ExportMapper
 )
 
+from ...backend import nuvemshop
+from ...connector import get_environment
+from ...unit.backend_adapter import GenericAdapter
 from ...unit.mapper import NuvemshopExportMapper
 from ...unit.exporter import (
     NuvemshopExporter,
-    delay_export_all_bindings
+    delay_export_all_bindings,
+    delay_export,
+    export_record
 )
-from ...backend import nuvemshop
-
 
 VARIANT_EXPORT_FIELDS = [
     'nuvemshop_image_id',
@@ -64,8 +67,12 @@ def nuvemshop_product_product_write(session, model_name, record_id, fields):
     record = model.browse(record_id)
     if not record.is_product_variant:
         return
-
-    if fields:
+    NO_UPDATE_FIELDS = [
+        'created_at',
+        'updated_at',
+        'stock',
+    ]
+    if fields and not any([field in fields for field in NO_UPDATE_FIELDS]):
         # If user modify any variant we delay template export but before
         # check if the template have a queued job
         template = record.mapped('main_template_id')
@@ -91,7 +98,7 @@ class ProductProductExporter(NuvemshopExporter):
     def _create(self, data):
         """ Create the Nuvemshop record """
         nuvemshop_record = self.backend_adapter.create(data)
-        return nuvemshop_record.get('id', 0)
+        return nuvemshop_record
 
     def _update(self, data):
         """ Update an Nuvemshop record """

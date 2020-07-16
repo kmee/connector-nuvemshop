@@ -4,23 +4,17 @@
 
 from datetime import timedelta
 
-from ...unit.backend_adapter import GenericAdapter
-from openerp.addons.connector.unit.synchronizer import ExportSynchronizer
-
-from ...unit.exporter import delay_export, delay_export_all_bindings, export_record
-
 from openerp.addons.connector.event import on_record_create, on_record_write
-from openerp.addons.connector.queue.job import job
+from openerp.addons.connector.unit.mapper import mapping, ExportMapper
 
-from openerp.addons.connector.unit.mapper import (
-    mapping,
-    ExportMapper,
-)
-from ..product_product.exporter import ProductProductExportMapper
 from ...unit.mapper import TranslationNuvemshopExportMapper
-from ...unit.exporter import TranslationNuvemshopExporter
+from ...unit.exporter import (
+    TranslationNuvemshopExporter,
+    delay_export,
+    export_record,
+    _date_to_odoo
+)
 from ...backend import nuvemshop
-from ...connector import get_environment
 
 
 TEMPLATE_EXPORT_FIELDS = [
@@ -56,6 +50,8 @@ TEMPLATE_EXPORT_FIELDS = [
     'ean13',
     # 'name',
 ]
+
+# TODO: Exportar atributos de variante corretamente
 
 
 @on_record_create(model_names='nuvemshop.product.template')
@@ -94,13 +90,6 @@ def nuvemshop_product_template_write(session, model_name, record_id, fields):
     if set(fields.keys()) <= set(TEMPLATE_EXPORT_FIELDS):
         delay_export(session, model_name, record_id)
 
-@job(default_channel='root.nuvemshop')
-def export_product_quantities(session, ids):
-    for model in ['template', 'product']:
-        model_obj = session.env['nuvemshop.product.' + model]
-        model_obj.search([
-            ('backend_id', 'in', [ids]),
-        ]).recompute_nuvemshop_qty()
 
 @nuvemshop
 class ProductTemplateExporter(TranslationNuvemshopExporter):
@@ -116,12 +105,18 @@ class ProductTemplateExporter(TranslationNuvemshopExporter):
             'openerp_id': self.erp_record.product_variant_ids[0].id,
             'nuvemshop_id': nuvemshop_record.get('variants')[0].get('id'),
             'main_template_id': self.erp_record.id,
+            'created_at': _date_to_odoo(
+                nuvemshop_record.get('variants')[0].get('created_at')
+            ),'updated_at': _date_to_odoo(
+                nuvemshop_record.get('variants')[0].get('updated_at')
+            ),
         })
 
-        return nuvemshop_record.get('id', 0)
+        return nuvemshop_record
 
     def _update(self, data):
         """ Update an Nuvemshop record """
+        # TODO: Sincronizar variantes corretamente
         assert self.nuvemshop_id
         return self.backend_adapter.write(self.nuvemshop_id, data)
 
@@ -132,7 +127,9 @@ class ProductTemplateExporter(TranslationNuvemshopExporter):
     def export_images(self):
         image_obj = self.session.env['nuvemshop.product.image']
 
-        for index, image in enumerate(self.erp_record.image_ids):
+        for index, image in enumerate(self.erp_record.image_ids.filtered(
+            lambda img: img.storage == 'url'
+        )):
             image_ext_id = image_obj.search([
                 ('backend_id', '=', self.backend_record.id),
                 ('openerp_id', '=', image.id),
@@ -191,7 +188,7 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
         # ('tags', 'tags'),
         # ('images', 'images'),
         # ('categories', 'categories'),
-        #TODO campo tags
+        # TODO campo tags
     ]
 
     @mapping

@@ -2,7 +2,8 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 import logging
-from openerp import _, exceptions
+from dateutil.parser.isoparser import isoparse
+from openerp import _, exceptions, fields
 from openerp.addons.connector.queue.job import job
 from openerp.addons.connector.queue.job import related_action
 from openerp.addons.connector.unit.synchronizer import Exporter
@@ -16,6 +17,11 @@ _logger = logging.getLogger(__name__)
 # * check in Nuvemshop if the record has been updated more recently than the
 #  last sync date and if yes, delay an import
 # * call the ``bind`` method of the binder to update the last sync date
+
+def _date_to_odoo(date):
+    clean_date = isoparse(date).replace(tzinfo=None)
+    new_date = fields.Datetime.to_string(clean_date)
+    return new_date
 
 
 class NuvemshopBaseExporter(Exporter):
@@ -63,6 +69,7 @@ class NuvemshopExporter(NuvemshopBaseExporter):
         """
         super(NuvemshopExporter, self).__init__(environment)
         self.erp_record = None
+        self.nuvemshop_record = None
 
     def _has_to_skip(self):
         """ Return True if the export can be skipped """
@@ -93,12 +100,21 @@ class NuvemshopExporter(NuvemshopBaseExporter):
     def _create(self, data):
         """ Create the Nuvemshop record """
         nuvemshop_record = self.backend_adapter.create(data)
-        return nuvemshop_record.get('id', 0)
+        return nuvemshop_record
 
     def _update(self, data):
         """ Update an Nuvemshop record """
         assert self.nuvemshop_id
         return self.backend_adapter.write(self.nuvemshop_id, data)
+
+    def _update_erp_record(self):
+        self.nuvemshop_id = self.nuvemshop_record.get('id')
+        self.erp_record.created_at = _date_to_odoo(
+            self.nuvemshop_record.get('created_at')
+        )
+        self.erp_record.updated_at = _date_to_odoo(
+            self.nuvemshop_record.get('updated_at')
+        )
 
     def _run(self, fields=None):
         """ Flow of the synchronization, implemented in inherited classes"""
@@ -122,7 +138,8 @@ class NuvemshopExporter(NuvemshopBaseExporter):
                 return _('Nothing to export.')
             # special check on data before export
             self._validate_data(record)
-            self._update(record)
+            self.nuvemshop_record = self._update(record)
+            self._update_erp_record()
         else:
             record = map_record.values(for_create=True)
             if fields is None:
@@ -132,7 +149,8 @@ class NuvemshopExporter(NuvemshopBaseExporter):
                 return _('Nothing to export.')
             # special check on data before export
             self._validate_data(record)
-            self.nuvemshop_id = self._create(record)
+            self.nuvemshop_record = self._create(record)
+            self._update_erp_record()
             if self.nuvemshop_id == 0:
                 raise exceptions.Warning(
                     _("Record on Nuvemshop have not been created"))
