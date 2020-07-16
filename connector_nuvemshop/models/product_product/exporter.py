@@ -143,3 +143,35 @@ class ProductProductExportMapper(NuvemshopExportMapper):
                     dict(pt=val.name) for val in record['attribute_value_ids']
                 ]
             }
+
+
+@nuvemshop
+class ProductInventoryExporter(ExportSynchronizer):
+    _model_name = ['nuvemshop.product.product']
+
+    def run(self, binding_id, fields):
+        """ Export the product inventory to Nuvemshop """
+        variant = self.env[self.model._name].browse(binding_id)
+        adapter = self.unit_for(GenericAdapter, 'nuvemshop.product.product')
+        binder = self.binder_for()
+        nuvemshop_id = binder.to_backend(variant.id)
+        template_id = variant.main_template_id.nuvemshop_id
+        adapter.export_quantity(template_id, nuvemshop_id, variant.stock)
+
+
+@job(default_channel='root.nuvemshop')
+def export_inventory(session, model_name, record_id, fields=None):
+    """ Export the inventory configuration and quantity of a product. """
+    product = session.env[model_name].browse(record_id)
+    backend_id = product.backend_id.id
+    env = get_environment(session, model_name, backend_id)
+    inventory_exporter = env.get_connector_unit(ProductInventoryExporter)
+    return inventory_exporter.run(record_id, fields)
+
+
+@job(default_channel='root.nuvemshop')
+def export_product_quantities(session, ids):
+    model_obj = session.env['nuvemshop.product.product']
+    model_obj.search([
+        ('backend_id', 'in', [ids]),
+    ]).recompute_nuvemshop_qty()

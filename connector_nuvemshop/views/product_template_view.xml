@@ -33,15 +33,6 @@
                     <field name="free_shipping"/>
                     <field name="canonical_url"/>
                     <field name="brand"/>
-                    <field name="stock"/>
-                    <button name="recompute_nuvemshop_qty"
-                        class="oe_highlight"
-                        type="object"
-                        string="Recompute quantity"/>
-                    <button name="force_export_stock"
-                        class="oe_highlight"
-                        type="object"
-                        string="Export All Stock"/>
                 </group>
                 <group string="Descriptions">
                     <field name="description_html"/>

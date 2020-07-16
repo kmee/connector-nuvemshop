@@ -6,6 +6,8 @@ import logging
 from openerp import api, models, fields
 from ...unit.backend_adapter import GenericAdapter
 from ...backend import nuvemshop
+from openerp.addons.connector.session import ConnectorSession
+from ..product_product.exporter import export_inventory
 
 _logger = logging.getLogger(__name__)
 
@@ -29,31 +31,14 @@ class ProductProduct(models.Model):
 
     @api.multi
     def update_nuvemshop_qty(self):
-        for product in self:
-            if product.product_variant_count == 1:
-                # Recompute qty in template binding if product has not
-                # combinations
-                product.product_tmpl_id.update_nuvemshop_quantities()
-            elif product.product_variant_count > 1:
-                # Recompute qty in combination binding
-                for combination_binding in product.nuvemshop_bind_ids:
-                    combination_binding.recompute_nuvemshop_qty()
+        for variant_binding in self.nuvemshop_variants_bind_ids:
+            variant_binding.recompute_nuvemshop_qty()
 
     @api.multi
     def update_nuvemshop_quantities(self):
-        for product in self:
-            product_template = product.product_tmpl_id
-            nuvemshop_combinations = (
-                len(product_template.product_variant_ids) > 1 and
-                product_template.product_variant_ids) or []
-            if not nuvemshop_combinations:
-                for nuvemshop_product in product_template.nuvemshop_bind_ids:
-                    nuvemshop_product.recompute_nuvemshop_qty()
-            else:
-                for nuvemshop_combination in nuvemshop_combinations:
-                    for combination_binding in \
-                            nuvemshop_combination.nuvemshop_bind_ids:
-                        combination_binding.recompute_nuvemshop_qty()
+        for variant_binding in \
+                self.nuvemshop_variants_bind_ids:
+            variant_binding.recompute_nuvemshop_qty()
         return True
 
 class NuvemshopProductProduct(models.Model):
@@ -113,6 +98,23 @@ class NuvemshopProductProduct(models.Model):
     )
 
     @api.multi
+    def force_export_stock(self):
+        session = ConnectorSession.from_env(self.env)
+        for binding in self.nuvemshop_variants_bind_ids:
+            export_inventory.delay(
+                session,
+                'nuvemshop.product.product',
+                binding.id,
+                fields=['stock'],
+                priority=20
+            )
+
+    def _nuvemshop_qty(self):
+        locations = self.backend_id.get_stock_locations()
+        qty_available = self.with_context(location=locations.ids).qty_available
+        return qty_available - self.outgoing_qty
+
+    @api.multi
     def recompute_nuvemshop_qty(self):
         for product_binding in self:
             locations = product_binding.backend_id.get_stock_locations()
@@ -133,6 +135,11 @@ class NuvemshopProductProduct(models.Model):
 class ProductProductAdapter(GenericAdapter):
     _model_name = 'nuvemshop.product.product'
     _nuvemshop_model = 'products'
+
+    def export_quantity(self, template_id, nuvemshop_id, quantity):
+        # TODO: verificar estoque no nuvemshop antes de exportar
+        # caso o numero esteja diferente, importar ordens antes
+        self.write(nuvemshop_id, dict(product_id=template_id, stock=quantity))
 
     def search(self, filters):
         if filters.get('product_id'):

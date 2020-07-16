@@ -8,7 +8,7 @@ from ...unit.backend_adapter import GenericAdapter
 from openerp.addons.connector.session import ConnectorSession
 from ...backend import nuvemshop
 from ...unit.importer import import_batch_delayed
-from ..product_template.exporter import export_inventory
+
 
 
 _logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class ProductTemplate(models.Model):
             template.mapped('nuvemshop_bind_ids').recompute_nuvemshop_qty()
             # Recompute variant Nuvemshop qty
             template.mapped(
-                'product_variant_ids.nuvemshop_bind_ids'
+                'product_variant_ids.nuvemshop_variants_bind_ids'
             ).recompute_nuvemshop_qty()
         return True
 
@@ -100,7 +100,6 @@ class NuvemshopProductTemplate(models.Model):
     description_html = fields.Html('HTML Description', translate=True)
     seo_title = fields.Char('SEO Title', translate=True)
     seo_description = fields.Char('SEO Description', translate=True)
-    stock = fields.Float(string='Quantidade em estoque na nuvemshop')
 
     @api.onchange('name')
     def _onchange_name(self):
@@ -108,45 +107,14 @@ class NuvemshopProductTemplate(models.Model):
             self.handle = self._handle_name(self.name)
 
     @api.multi
-    def force_export_stock(self):
-        session = ConnectorSession.from_env(self.env)
-        for template in self:
-            if template.product_variant_count > 1:
-                for binding in template.mapped(
-                        'product_variant_ids.nuvemshop_bind_ids'):
-                    export_inventory.delay(
-                        session,
-                        'nuvemshop.product.product',
-                        binding.id,
-                        fields=['stock'],
-                        priority=20
-                    )
-            else:
-                for binding in template.nuvemshop_bind_ids:
-                    export_inventory.delay(
-                        session,
-                        'nuvemshop.product.template',
-                        binding.id,
-                        fields=['stock'],
-                        priority=20
-                    )
-
-    def _nuvemshop_qty(self):
-        locations = self.backend_id.get_stock_locations()
-        qty_available = self.with_context(location=locations.ids).qty_available
-        return qty_available - self.outgoing_qty
-
-    @api.multi
     def recompute_nuvemshop_qty(self):
         for product_binding in self:
-            new_qty = product_binding._nuvemshop_qty()
-            if product_binding.stock != new_qty:
-                product_binding.stock = new_qty if new_qty >= 0.0 else 0.0
-            # Recompute variants if is needed
-            if product_binding.product_variant_count > 1:
-                for variant in product_binding.mapped(
-                        'product_variant_ids.nuvemshop_bind_ids'):
-                    variant.recompute_nuvemshop_qty()
+            for variant in product_binding.mapped(
+                'product_variant_ids.nuvemshop_variants_bind_ids'):
+                new_qty = variant._nuvemshop_qty()
+                if variant.stock != new_qty:
+                    variant.stock = new_qty if new_qty >= 0.0 else 0.0
+                variant.recompute_nuvemshop_qty()
         return True
 
 @nuvemshop
