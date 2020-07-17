@@ -284,6 +284,14 @@ class SaleOrderImportMapper(ImportMapper):
             val.update({'partner_id': partner_id})
             return val
 
+    @mapping
+    def partner_shipping_id(self, record):
+        shipping_address_id = record['shipping_address']['id']
+        partner_shipping_id = self.env['nuvemshop.contact'].search([
+            ('nuvemshop_id', '=', shipping_address_id)])
+        if partner_shipping_id:
+            return {'partner_shipping_id': partner_shipping_id.id}
+
     #TODO: REFATORAR PARA ESCOLHER CONDICAO DE PAGAMENTO CORRETAMENTE
 
     # @mapping
