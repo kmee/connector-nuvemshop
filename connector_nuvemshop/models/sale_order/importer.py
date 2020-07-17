@@ -458,7 +458,6 @@ class SaleOrderImporter(NuvemshopImporter):
 class SaleOrderLineImportMapper(ImportMapper):
     _model_name = 'nuvemshop.sale.order.line'
 
-
     direct = [
         ('name', 'name'),
         ('quantity', 'product_uom_qty'),

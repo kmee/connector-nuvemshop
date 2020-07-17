@@ -168,9 +168,7 @@ class GenericAdapter(NuvemshopCRUDAdapter):
         for request in self.store[self._nuvemshop_model].list(
             fields=['id'], filters=filters
         ):
-            result += [
-                r.toDict().get('id') for r in request
-            ]
+            result += [request.toDict().get('id')]
 
         return result
 
