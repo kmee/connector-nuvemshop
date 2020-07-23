@@ -22,6 +22,7 @@ from ..backend import nuvemshop
 from ..connector import get_environment
 from ..related_action import link
 from dateutil.parser.isoparser import isoparse
+from tiendanube.resources.exceptions import APIError
 
 _logger = logging.getLogger(__name__)
 
@@ -379,7 +380,20 @@ class BatchImporter(Importer):
 
     def run(self, filters=None):
         """ Run the synchronization """
-        record_ids = self.backend_adapter.search(filters)
+        try:
+            record_ids = self.backend_adapter.search(filters)
+        except APIError as e:
+            if 'code: 404' in e.message and\
+                    '"description": "Last page is 0"' in e.message:
+                raise RetryableJobError(
+                    "Nothing to import. The job will retry later",
+                    seconds=60*15,
+                    ignore_retry=True
+                )
+            else:
+                raise e
+        except AttributeError as e:
+            print e
         _logger.info('search for nuvemshop %s returned %s', filters, record_ids)
         for record_id in record_ids:
             self._import_record(record_id)
