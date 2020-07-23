@@ -74,7 +74,8 @@ class NuvemshopProductProduct(models.Model):
     )
 
     stock_management = fields.Boolean(
-        string="Stock Management"
+        string="Stock Management",
+        default=True
     )
 
     width = fields.Float(

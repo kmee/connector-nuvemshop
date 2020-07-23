@@ -35,6 +35,7 @@ class ProductProductImportMapper(ImportMapper):
         (normalize_datetime('created_at'), 'created_at'),
         (normalize_datetime('updated_at'), 'updated_at'),
         ('stock', 'stock'),
+        ('values', 'values'),
     ]
 
     @mapping
@@ -57,8 +58,10 @@ class ProductProductImportMapper(ImportMapper):
         if record['values']:
             pav = self.env['product.attribute.value']
             values = []
-            template = self.binder_for('nuvemshop.product.template').to_openerp(
-                record['product_id'], unwrap=True)
+            template = self.binder_for(
+                'nuvemshop.product.template').to_openerp(
+                record['product_id'], unwrap=True
+            )
             for idx, value in enumerate(record['values']):
                 value_id = pav.search([
                     ('name', '=', value.get('pt')),

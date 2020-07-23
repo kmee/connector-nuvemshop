@@ -109,12 +109,12 @@ class NuvemshopExporter(NuvemshopBaseExporter):
 
     def _update_erp_record(self):
         self.nuvemshop_id = self.nuvemshop_record.get('id')
-        self.erp_record.created_at = _date_to_odoo(
-            self.nuvemshop_record.get('created_at')
-        )
-        self.erp_record.updated_at = _date_to_odoo(
-            self.nuvemshop_record.get('updated_at')
-        )
+        self.erp_record.write({
+            'created_at': _date_to_odoo(
+                 self.nuvemshop_record.get('created_at')),
+            'updated_at': _date_to_odoo(
+                self.nuvemshop_record.get('updated_at'))
+        })
 
     def _run(self, fields=None):
         """ Flow of the synchronization, implemented in inherited classes"""
@@ -128,6 +128,9 @@ class NuvemshopExporter(NuvemshopBaseExporter):
         if self._has_to_skip():
             return
 
+        self.erp_record = self.erp_record.with_context(
+            lang=self.backend_record.default_lang_id.code
+        )
         # export the missing linked resources
         self._export_dependencies()
         map_record = self.mapper.map_record(self.erp_record)

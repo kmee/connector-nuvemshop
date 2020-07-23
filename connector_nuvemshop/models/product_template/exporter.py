@@ -28,7 +28,7 @@ TEMPLATE_EXPORT_FIELDS = [
     'seo_title',
     'seo_description',
     'brand',
-    'attribute_line_ids',
+    # 'attribute_line_ids',
     # 'created_at',
     # 'updated_at',
     'product_variant_ids',
@@ -100,17 +100,25 @@ class ProductTemplateExporter(TranslationNuvemshopExporter):
         nuvemshop_record = self.backend_adapter.create(data)
         nuvemshop_variant_obj = self.env['nuvemshop.product.product']
 
-        nuvemshop_variant_obj.with_context(connector_no_export=True).create({
-            'backend_id': self.backend_record.id,
-            'openerp_id': self.erp_record.product_variant_ids[0].id,
-            'nuvemshop_id': nuvemshop_record.get('variants')[0].get('id'),
-            'main_template_id': self.erp_record.id,
-            'created_at': _date_to_odoo(
-                nuvemshop_record.get('variants')[0].get('created_at')
-            ),'updated_at': _date_to_odoo(
-                nuvemshop_record.get('variants')[0].get('updated_at')
-            ),
-        })
+        if len(nuvemshop_record.get('variants')) == 1:
+            nuvemshop_variant_obj.with_context(
+                connector_no_export=True
+            ).create({
+                'backend_id': self.backend_record.id,
+                'openerp_id': self.erp_record.product_variant_ids[0].id,
+                'nuvemshop_id': nuvemshop_record.get('variants')[0].get('id'),
+                'main_template_id': self.erp_record.id,
+                'created_at': _date_to_odoo(
+                    nuvemshop_record.get('variants')[0].get('created_at')),
+                'updated_at': _date_to_odoo(
+                    nuvemshop_record.get('variants')[0].get('updated_at')),
+            })
+        else:
+            for variant in nuvemshop_record.get('variants'):
+                for value in variant.get('values'):
+                    self.env['product.attribute.values'].search([
+                        ('name', '=', value.get('pt'))
+                    ])
 
         return nuvemshop_record
 
@@ -167,7 +175,7 @@ class ProductTemplateExporter(TranslationNuvemshopExporter):
                 self.session,
                 'nuvemshop.product.product',
                 variant_ext_id.id, priority=70,
-                eta=timedelta(seconds=10 + (index * 2))
+                eta=timedelta(seconds=5 + (index * 2))
             )
 
 
@@ -197,13 +205,9 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
         if record.attribute_line_ids:
             for attribute in record.attribute_line_ids:
                 attributes.append(
-                    {
-                        "pt": attribute.display_name
-                    }
+                    {"pt": attribute.display_name}
                 )
-            return {
-                'attributes': attributes
-            }
+            return {'attributes': attributes}
 
     @mapping
     def description(self, record):
