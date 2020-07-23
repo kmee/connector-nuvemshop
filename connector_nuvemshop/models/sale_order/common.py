@@ -133,7 +133,7 @@ class NuvemshopSaleOrder(models.Model):
         selection=[
             ('open', 'Open'),
             ('closed', 'Closed'),
-            ('canceled', 'Canceled'),
+            ('cancelled', 'Cancelled'),
         ]
     )
     payment_status = fields.Selection(
@@ -205,6 +205,7 @@ class NuvemshopSaleOrderLine(models.Model):
     nuvemshop_order_id = fields.Many2one(
         comodel_name='nuvemshop.sale.order',
         string='Nuvemshop Order',
+        ondelete='cascade',
     )
 
     @api.model

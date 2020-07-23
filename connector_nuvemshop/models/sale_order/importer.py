@@ -109,10 +109,15 @@ class SaleImportRule(ConnectorUnit):
         :returns: True if the sale order should be imported
         :rtype: boolean
         """
-        if record.get('gateway') and record.get('payment_details'):
-            method = record['payment_details']['method']
+        payment_method = False
+        if record.get('gateway') and \
+                record.get('payment_details').get('method'):
+            method = record['payment_details'].get('method')
+            method_name = record['gateway']
+            if method:
+                method_name = method_name + '(' + method + ')'
             payment_method = self.env['payment.method'].search([
-                ('name', 'ilike', record['gateway'] + '(' + method + ')'),
+                ('name', 'ilike', method_name),
             ])
             if not payment_method:
                 payment_method = self.env['payment.method'].search([
@@ -212,6 +217,7 @@ class SaleOrderImportMapper(ImportMapper):
         ),
     ]
 
+
     def _map_child(self, map_record, from_attr, to_attr, model_name):
         source = map_record.source
         if callable(from_attr):
@@ -230,6 +236,15 @@ class SaleOrderImportMapper(ImportMapper):
             items = mapper.get_items(
                 [detail_record], map_record, to_attr, options=self.options
             )
+            if len(items) == 1:
+                nuvemshop_sale_line = \
+                    self.env['nuvemshop.sale.order.line'].search([
+                        ('nuvemshop_id', '=', items[0][2]['nuvemshop_id'])
+                    ]
+                )
+                if nuvemshop_sale_line:
+                    nuvemshop_sale_line.write(items[0][2])
+                    continue
             children.extend(items)
         return children
 
@@ -270,7 +285,8 @@ class SaleOrderImportMapper(ImportMapper):
                     ignore_retry=True
                 )
 
-            company = self.backend_record.company_id or self.env.user.company_id
+            company = self.backend_record.company_id or\
+                      self.env.user.company_id
 
             ctx = dict(self.env.context)
             ctx.update({
@@ -397,6 +413,7 @@ class SaleOrderImporter(NuvemshopImporter):
             nuvemshop_id=record['customer']['id'],
             binding_model='nuvemshop.res.partner',
             importer_class=ResPartnerImporter,
+            always=True
         )
         for line in record['products']:
             self._import_dependency(
@@ -411,7 +428,9 @@ class SaleOrderImporter(NuvemshopImporter):
 
     def _set_freight(self, binding):
         if self.nuvemshop_record.get('shipping_cost_customer'):
-            binding.amount_freight = self.nuvemshop_record['shipping_cost_customer']
+            binding.amount_freight = self.nuvemshop_record[
+                'shipping_cost_customer'
+            ]
 
 
     def _check_shipping_data(self, binding):
@@ -425,18 +444,23 @@ class SaleOrderImporter(NuvemshopImporter):
 
     def _check_to_cancel(self, binding):
         order_number = binding.name
-        if binding.status == 'cancelled':
+        if binding.status == 'cancelled' and binding.state != 'cancel':
+            binding.with_context(
+                connector_no_export=True
+            ).canceled_in_backend = True
             raise NothingToDoJob('Order %s canceled' % order_number)
         max_days = binding.payment_method_id.days_before_cancel
         if max_days:
             order_date = isoparse(binding.created_at).replace(tzinfo=None)
 
             if order_date + timedelta(days=max_days) < datetime.datetime.now():
+                ctx = dict(self.env.context)
+                ctx.update(dict(connector_no_export=True))
                 session = ConnectorSession(self.env.cr, self.env.uid,
-                                           context=self.env.context)
+                                           context=ctx)
                 if binding.payment_status not in ('paid', 'authorized') and \
-                        binding.shipping_status == 'unshipped':
-
+                        binding.shipping_status == 'unpacked' and\
+                        binding.status != 'cancelled':
                     export_state_change.delay(
                         session,
                         'nuvemshop.sale.order',
@@ -445,12 +469,13 @@ class SaleOrderImporter(NuvemshopImporter):
                         data=dict(reason='other')
                     )
                 else:
-                    add_checkpoint(
+                    check = add_checkpoint(
                         session=session,
                         model_name='sale.order',
                         record_id=binding.openerp_id.id,
-                        backend_id=binding.backend_record.id
+                        backend_id=binding.backend_id.id
                     )
+        return
 
     def _after_import(self, binding):
         super(SaleOrderImporter, self)._after_import(binding)
@@ -482,7 +507,8 @@ class SaleOrderLineImportMapper(ImportMapper):
     @mapping
     def nuvemshop_order_id(self, record):
         if record.get('nuvemshop_order_id'):
-            nuvemshop_sale_order_binder = self.binder_for('nuvemshop.sale.order')
+            nuvemshop_sale_order_binder = self.binder_for(
+                'nuvemshop.sale.order')
             nuvemshop_order = nuvemshop_sale_order_binder.to_openerp(
                 record.get('nuvemshop_order_id')
             )
@@ -500,7 +526,8 @@ class SaleOrderLineImportMapper(ImportMapper):
     @mapping
     def product_id(self, record):
         if record.get('variant_id'):
-            product_product_binder = self.binder_for('nuvemshop.product.product')
+            product_product_binder = self.binder_for(
+                'nuvemshop.product.product')
             product_product = product_product_binder.to_openerp(
                 record.get('variant_id'), unwrap=True
             )
@@ -508,7 +535,8 @@ class SaleOrderLineImportMapper(ImportMapper):
                 return {'product_id': product_product.id}
             else:
                 raise RetryableJobError(
-                    'The product was not imported yet. The job will be retried later',
+                    'The product was not imported yet. '
+                    'The job will be retried later',
                     seconds=20,
                     ignore_retry=True
                 )
