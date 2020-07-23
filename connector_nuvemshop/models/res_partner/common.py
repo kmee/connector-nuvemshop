@@ -25,6 +25,12 @@ class ResPartner(models.Model):
         string="Nuvemshop Contact Bindings"
     )
 
+    @api.multi
+    @api.constrains('cnpj_cpf', 'inscr_est')
+    def _check_cnpj_inscr_est(self):
+        if not any(self.mapped('is_company')):
+            return
+        return super(ResPartner, self)._check_cnpj_inscr_est()
 
 class NuvemshopResPartner(models.Model):
     _name = 'nuvemshop.res.partner'
