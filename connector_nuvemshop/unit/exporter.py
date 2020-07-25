@@ -7,6 +7,8 @@ from openerp import _, exceptions, fields
 from openerp.addons.connector.queue.job import job
 from openerp.addons.connector.queue.job import related_action
 from openerp.addons.connector.unit.synchronizer import Exporter
+from openerp.addons.connector.exception import FailedJobError
+
 from .mapper import TranslationNuvemshopExportMapper
 from ..connector import get_environment
 
@@ -141,7 +143,10 @@ class NuvemshopExporter(NuvemshopBaseExporter):
                 return _('Nothing to export.')
             # special check on data before export
             self._validate_data(record)
-            self.nuvemshop_record = self._update(record)
+            try:
+                self.nuvemshop_record = self._update(record)
+            except:
+                raise FailedJobError
             self._update_erp_record()
         else:
             record = map_record.values(for_create=True)
@@ -152,7 +157,10 @@ class NuvemshopExporter(NuvemshopBaseExporter):
                 return _('Nothing to export.')
             # special check on data before export
             self._validate_data(record)
-            self.nuvemshop_record = self._create(record)
+            try:
+                self.nuvemshop_record = self._create(record)
+            except:
+                raise FailedJobError
             self._update_erp_record()
             if self.nuvemshop_id == 0:
                 raise exceptions.Warning(

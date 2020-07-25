@@ -59,7 +59,7 @@ class SaleImportRule(ConnectorUnit):
             raise RetryableJobError(
                 'The order has not been authorized.\n'
                 'The import will be retried later.',
-                seconds=60*60,
+                seconds=60,
                 ignore_retry=True
             )
 
@@ -69,7 +69,7 @@ class SaleImportRule(ConnectorUnit):
             raise RetryableJobError(
                 'The order has not been paid.\n'
                 'The import will be retried later.',
-                seconds=60*60,
+                seconds=60,
                 ignore_retry=True
             )
 
