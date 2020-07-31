@@ -44,15 +44,19 @@ class SaleImportRule(ConnectorUnit):
 
     def _rule_always(self, record, method):
         """ Always import the order """
+        _logger.info("NUVEMSHOP: sale.order._rule_always")
         return True
 
     def _rule_never(self, record, method):
         """ Never import the order """
+        _logger.info("NUVEMSHOP: sale.order._rule_never")
         raise NothingToDoJob('Orders with payment method %s '
                              'are never imported.' %
                              record['gateway'])
 
     def _rule_authorized(self, record, method):
+        _logger.info("NUVEMSHOP: sale.order._rule_authorized")
+
         """ Import the order only if payment has been authorized. """
         if record.get('gateway') != 'offline' and \
                 record.get('payment_status') not in ['authorized', 'paid']:
@@ -64,6 +68,8 @@ class SaleImportRule(ConnectorUnit):
             )
 
     def _rule_paid(self, record, method):
+        _logger.info("NUVEMSHOP: sale.order._rule_paid")
+
         """ Import the order only if it has received a payment """
         if not record.get('payment_status') == 'paid':
             raise RetryableJobError(
@@ -109,6 +115,7 @@ class SaleImportRule(ConnectorUnit):
         :returns: True if the sale order should be imported
         :rtype: boolean
         """
+        _logger.info("NUVEMSHOP: sale.order.check")
         payment_method = False
         if record.get('gateway') and \
                 record.get('payment_details').get('method'):
@@ -125,6 +132,7 @@ class SaleImportRule(ConnectorUnit):
                 ])
 
         if not payment_method:
+            _logger.info("NUVEMSHOP: sale.order.check.raise.FailedJob")
             raise FailedJobError(
                 "The configuration is missing for the Payment Method '%s'.\n\n"
                 "Resolution:\n"
@@ -136,6 +144,7 @@ class SaleImportRule(ConnectorUnit):
                                                   payment_method))
         # self._rule_global(record, payment_method)
         self._rules[payment_method.import_rule](self, record, payment_method)
+        _logger.info("NUVEMSHOP: sale.order.check.compleate")
 
 
 @nuvemshop
@@ -408,6 +417,7 @@ class SaleOrderImporter(NuvemshopImporter):
     _model_name = ['nuvemshop.sale.order']
 
     def _import_dependencies(self):
+        _logger.info("NUVEMSHOP: sale.order._import_dependencies")
         record = self.nuvemshop_record
         self._import_dependency(
             nuvemshop_id=record['customer']['id'],
@@ -423,17 +433,21 @@ class SaleOrderImporter(NuvemshopImporter):
             )
 
     def _before_import(self):
+        _logger.info("NUVEMSHOP: sale.order._before_import.start")
         rules = self.unit_for(SaleImportRule)
+        _logger.info("NUVEMSHOP: sale.order._before_import.rules {}".format(rules))
         rules.check(self.nuvemshop_record)
+        _logger.info("NUVEMSHOP: sale.order._before_import.compleate")
 
     def _set_freight(self, binding):
+        _logger.info("NUVEMSHOP: sale.order._set_freight")
         if self.nuvemshop_record.get('shipping_cost_customer'):
             binding.amount_freight = self.nuvemshop_record[
                 'shipping_cost_customer'
             ]
 
-
     def _check_shipping_data(self, binding):
+        _logger.info("NUVEMSHOP: sale.order._check_shipping_data")
         if binding.carrier_id.name != self.nuvemshop_record['shipping_option']:
             add_checkpoint(
                 self.session,
@@ -478,6 +492,7 @@ class SaleOrderImporter(NuvemshopImporter):
         return
 
     def _after_import(self, binding):
+        _logger.info("NUVEMSHOP: sale.order._after_import")
         super(SaleOrderImporter, self)._after_import(binding)
         self._check_to_cancel(binding)
         self._set_freight(binding)

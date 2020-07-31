@@ -124,8 +124,10 @@ class NuvemshopImporter(Importer):
         Import of dependencies can be done manually or by calling
         :meth:`_import_dependency` for each dependency.
         """
+        _logger.info("NUVEMSHOP: unit.importer._import_dependencies")
         if self._parent_field:
             self._import_parent()
+        _logger.info("NUVEMSHOP: unit.importer._import_dependencies.ok")
 
     def _import_parent(self):
         parent_id = self.nuvemshop_record.get(self._parent_field)
@@ -233,6 +235,7 @@ class NuvemshopImporter(Importer):
 
         :param nuvemshop_id: identifier of the record on NuvemshopCommerce
         """
+        _logger.info("NUVEMSHOP: unit.importer.run")
         self.nuvemshop_id = nuvemshop_id
         lock_name = 'import({}, {}, {}, {})'.format(
             self.backend_record._name,
@@ -242,14 +245,18 @@ class NuvemshopImporter(Importer):
         )
         # Keep a lock on this import until the transaction is committed
         self.advisory_lock_or_retry(lock_name, retry_seconds=RETRY_ON_ADVISORY_LOCK)
-
+        _logger.info("NUVEMSHOP: unit.importer.run.lock_ok")
         try:
             if not self.nuvemshop_record:
                 self.nuvemshop_record = self._get_nuvemshop_data()
         except IDMissingInBackend:
+            _logger.info("NUVEMSHOP: unit.importer.run "
+                         "Record does no longer exist in NuvemshopCommerce")
             return _('Record does no longer exist in NuvemshopCommerce')
 
         binding = self.binder.to_openerp(self.nuvemshop_id)
+        _logger.info("NUVEMSHOP: unit.importer.run.binding {}".format(binding))
+
         if not binding:
             with self.do_in_new_connector_env() as new_connector_env:
                 binder = new_connector_env.get_connector_unit(Binder)
@@ -262,9 +269,12 @@ class NuvemshopImporter(Importer):
 
         skip = self._must_skip()
         if skip:
+            _logger.info("NUVEMSHOP: unit.importer.run.skiping {}".format(skip))
             return skip
 
         if not kwargs.get('force') and self._is_uptodate(binding):
+            _logger.info("NUVEMSHOP: unit.importer.run.already update")
+
             return _('Already up-to-date.')
 
         self._before_import()
@@ -273,17 +283,22 @@ class NuvemshopImporter(Importer):
         self._import(binding, **kwargs)
 
     def _import(self, binding, **kwargs):
+        _logger.info("NUVEMSHOP: unit.importer._import")
+
         map_record = self._map_data()
 
         if binding:
+            _logger.info("NUVEMSHOP: unit.importer._import.update")
             record = self._update_data(map_record)
             self._update(binding, record)
         else:
+            _logger.info("NUVEMSHOP: unit.importer._import.create")
             record = self._create_data(map_record)
             binding = self._create(record)
         self.binder.bind(self.nuvemshop_id, binding)
-
+        _logger.info("NUVEMSHOP: unit.importer._import.after_import")
         self._after_import(binding)
+        _logger.info("NUVEMSHOP: unit.importer._import.ok")
 
 
 class TranslatableRecordImporter(NuvemshopImporter):
