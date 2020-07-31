@@ -5,4 +5,5 @@ MODEL_NAMES = [
     'nuvemshop.product.image',
     'nuvemshop.res.partner',
     'nuvemshop.sale.order',
+    'nuvemshop.contact',
 ]

@@ -14,16 +14,17 @@ from openerp.addons.connector.exception import (
     MappingError,
     NothingToDoJob
 )
-
-from openerp import fields
-from openerp.addons.l10n_br_base.tools.misc import calc_price_ratio
+from openerp.addons.connector.connector import ConnectorUnit
+from openerp.addons.connector.session import ConnectorSession
 from openerp.addons.connector.unit.mapper import (
     mapping,
     ImportMapper
 )
 
-from openerp.addons.connector.connector import ConnectorUnit
+from openerp import fields
+from openerp.addons.l10n_br_base.tools.misc import calc_price_ratio
 
+from .exporter import export_state_change, ORDER_COMMAND_MAPPING
 from ..res_partner.importer import ResPartnerImporter
 from ..product_template.importer import ProductTemplateImporter
 from ...unit.importer import NuvemshopImporter, normalize_datetime
@@ -32,6 +33,9 @@ from ...connector import add_checkpoint
 from ...unit.backend_adapter import GenericAdapter
 
 _logger = logging.getLogger(__name__)
+
+# TODO: - refatorar estados para poder cancelar e retornar estoque
+#       - rateio do frete
 
 
 @nuvemshop
@@ -55,7 +59,7 @@ class SaleImportRule(ConnectorUnit):
             raise RetryableJobError(
                 'The order has not been authorized.\n'
                 'The import will be retried later.',
-                seconds=60*60,
+                seconds=60,
                 ignore_retry=True
             )
 
@@ -65,7 +69,7 @@ class SaleImportRule(ConnectorUnit):
             raise RetryableJobError(
                 'The order has not been paid.\n'
                 'The import will be retried later.',
-                seconds=60*60,
+                seconds=60,
                 ignore_retry=True
             )
 
@@ -76,19 +80,26 @@ class SaleImportRule(ConnectorUnit):
         'never': _rule_never,
     }
 
-    def _rule_global(self, record, method):
-        """ Rule always executed, whichever is the selected rule """
-        # the order has been canceled since the job has been created
-        order_number = record['number']
-        if record['status'] == 'cancelled':
-            raise NothingToDoJob('Order %s canceled' % order_number)
-        max_days = method.days_before_cancel
-        if max_days:
-            order_date = isoparse(record.get('created_at')).replace(tzinfo=None)
-            if order_date + timedelta(days=max_days) < datetime.datetime.now():
-                raise NothingToDoJob('Import of the order %s canceled '
-                                     'because it has not been paid since %d '
-                                     'days' % (order_number, max_days))
+    # def _rule_global(self, record, method):
+    #     """ Rule always executed, whichever is the selected rule """
+    #     # the order has been canceled since the job has been created
+    #     order_number = record['number']
+    #     if record['status'] == 'cancelled':
+    #         raise NothingToDoJob('Order %s canceled' % order_number)
+    #     max_days = method.days_before_cancel
+    #     if max_days:
+    #         order_date = isoparse(
+    #             record.get('created_at')).replace(tzinfo=None)
+    #
+    #         if order_date + timedelta(days=max_days) < datetime.datetime.now():
+    #
+    #             if record['payment_status'] not in ('paid', 'authorized') and\
+    #                     record['shipping_status'] == 'unshipped':
+    #
+    #                 raise NothingToDoJob(
+    #                     'Import of the order %s canceled because '
+    #                     'it has not been paid since %d '
+    #                     'days' % (order_number, max_days))
 
     def check(self, record):
         """ Check whether the current sale order should be imported
@@ -98,12 +109,22 @@ class SaleImportRule(ConnectorUnit):
         :returns: True if the sale order should be imported
         :rtype: boolean
         """
-        payment_method = record['gateway']
-        method = self.env['payment.method'].search(
-            [('name', '=', payment_method)],
-            limit=1,
-        )
-        if not method:
+        payment_method = False
+        if record.get('gateway') and \
+                record.get('payment_details').get('method'):
+            method = record['payment_details'].get('method')
+            method_name = record['gateway']
+            if method:
+                method_name = method_name + '(' + method + ')'
+            payment_method = self.env['payment.method'].search([
+                ('name', 'ilike', method_name),
+            ])
+            if not payment_method:
+                payment_method = self.env['payment.method'].search([
+                    ('name', 'ilike', record['gateway']),
+                ])
+
+        if not payment_method:
             raise FailedJobError(
                 "The configuration is missing for the Payment Method '%s'.\n\n"
                 "Resolution:\n"
@@ -113,8 +134,8 @@ class SaleImportRule(ConnectorUnit):
                 "-Eventually  link the Payment Method to an existing Workflow "
                 "Process or create a new one." % (payment_method,
                                                   payment_method))
-        self._rule_global(record, method)
-        self._rules[method.import_rule](self, record, method)
+        # self._rule_global(record, payment_method)
+        self._rules[payment_method.import_rule](self, record, payment_method)
 
 
 @nuvemshop
@@ -196,9 +217,9 @@ class SaleOrderImportMapper(ImportMapper):
         ),
     ]
 
+
     def _map_child(self, map_record, from_attr, to_attr, model_name):
         source = map_record.source
-        # TODO patch ImportMapper in connector to support callable
         if callable(from_attr):
             child_records = from_attr(self, source)
         else:
@@ -215,24 +236,40 @@ class SaleOrderImportMapper(ImportMapper):
             items = mapper.get_items(
                 [detail_record], map_record, to_attr, options=self.options
             )
+            if len(items) == 1:
+                nuvemshop_sale_line = \
+                    self.env['nuvemshop.sale.order.line'].search([
+                        ('nuvemshop_id', '=', items[0][2]['nuvemshop_id'])
+                    ]
+                )
+                if nuvemshop_sale_line:
+                    nuvemshop_sale_line.write(items[0][2])
+                    continue
             children.extend(items)
         return children
 
     @mapping
+    def warehouse_id(self, record):
+        return {'warehouse_id': self.backend_record.warehouse_id.id}
+
+    @mapping
     def payment(self, record):
-        if record.get('gateway'):
-            method = self.env['payment.method'].search([
-                ('name', '=', record['gateway']),
-            ], limit=1)
-            assert method, ("Payment method '%s' has not been found ; "
+        if record.get('gateway') and record.get('payment_details'):
+            method = record['payment_details']['method']
+            payment_method = self.env['payment.method'].search([
+                ('name', 'ilike', record['gateway'] + '(' + method + ')'),
+            ])
+
+            assert payment_method, ("Payment method '%s' has not been found ; "
                             "you should create it manually (in Sales->"
                             "Configuration->Sales->Payment Methods" %
                             record['gateway'])
-            return {
-                'payment_method_id': method.id,
-                'workflow_process_id': method.workflow_process_id.id
-            }
 
+            return {
+                'payment_method_id': payment_method.id,
+                'workflow_process_id': payment_method.workflow_process_id.id,
+                'payment_term_id': payment_method.payment_term_id.id,
+            }
 
     @mapping
     def partner_id(self, record):
@@ -248,7 +285,8 @@ class SaleOrderImportMapper(ImportMapper):
                     ignore_retry=True
                 )
 
-            company = self.backend_record.company_id or self.env.user.company_id
+            company = self.backend_record.company_id or\
+                      self.env.user.company_id
 
             ctx = dict(self.env.context)
             ctx.update({
@@ -262,22 +300,31 @@ class SaleOrderImportMapper(ImportMapper):
             val.update({'partner_id': partner_id})
             return val
 
-    #TODO: REFATORAR PARA ESCOLHER CONDICAO DE PAGAMENTO CORRETAMENTE
     @mapping
-    def account_payment_ids(self, record):
-        if record['payment_details'].get('method'):
-            if record['payment_details']['method'] == 'boleto':
-                account_payment_ids = [(0, 0, {
-                    'amount': record['total'],
-                    'payment_term_id':
-                        self.env['account.payment.term'].search([
-                            ('forma_pagamento', '=', '15'),
-                            ('name', '=', '15 Days'),
-                        ], limit=1).id
-                })]
-                return {
-                    'account_payment_ids': account_payment_ids
-                }
+    def partner_shipping_id(self, record):
+        shipping_address_id = record['shipping_address']['id']
+        partner_shipping_id = self.env['nuvemshop.contact'].search([
+            ('nuvemshop_id', '=', shipping_address_id)])
+        if partner_shipping_id:
+            return {'partner_shipping_id': partner_shipping_id.id}
+
+    #TODO: REFATORAR PARA ESCOLHER CONDICAO DE PAGAMENTO CORRETAMENTE
+
+    # @mapping
+    # def account_payment_ids(self, record):
+    #     if record['payment_details'].get('method'):
+    #         if record['payment_details']['method'] == 'boleto':
+    #             account_payment_ids = [(0, 0, {
+    #                 'amount': record['total'],
+    #                 'payment_term_id':
+    #                     self.env['account.payment.term'].search([
+    #                         ('forma_pagamento', '=', '15'),
+    #                         ('name', '=', '15 Days'),
+    #                     ], limit=1).id
+    #             })]
+    #             return {
+    #                 'account_payment_ids': account_payment_ids
+    #             }
 
     @mapping
     def date_order(self, record):
@@ -363,15 +410,16 @@ class SaleOrderImporter(NuvemshopImporter):
     def _import_dependencies(self):
         record = self.nuvemshop_record
         self._import_dependency(
-            record['customer']['id'],
-            'nuvemshop.res.partner',
-            ResPartnerImporter,
+            nuvemshop_id=record['customer']['id'],
+            binding_model='nuvemshop.res.partner',
+            importer_class=ResPartnerImporter,
+            always=True
         )
         for line in record['products']:
             self._import_dependency(
-                line['product_id'],
-                'nuvemshop.product.template',
-                ProductTemplateImporter,
+                nuvemshop_id=line['product_id'],
+                binding_model='nuvemshop.product.template',
+                importer_class=ProductTemplateImporter,
             )
 
     def _before_import(self):
@@ -380,7 +428,9 @@ class SaleOrderImporter(NuvemshopImporter):
 
     def _set_freight(self, binding):
         if self.nuvemshop_record.get('shipping_cost_customer'):
-            binding.amount_freight = self.nuvemshop_record['shipping_cost_customer']
+            binding.amount_freight = self.nuvemshop_record[
+                'shipping_cost_customer'
+            ]
 
 
     def _check_shipping_data(self, binding):
@@ -392,8 +442,44 @@ class SaleOrderImporter(NuvemshopImporter):
                 self.backend_id.id
             )
 
+    def _check_to_cancel(self, binding):
+        order_number = binding.name
+        if binding.status == 'cancelled' and binding.state != 'cancel':
+            binding.with_context(
+                connector_no_export=True
+            ).canceled_in_backend = True
+            raise NothingToDoJob('Order %s canceled' % order_number)
+        max_days = binding.payment_method_id.days_before_cancel
+        if max_days:
+            order_date = isoparse(binding.created_at).replace(tzinfo=None)
+
+            if order_date + timedelta(days=max_days) < datetime.datetime.now():
+                ctx = dict(self.env.context)
+                ctx.update(dict(connector_no_export=True))
+                session = ConnectorSession(self.env.cr, self.env.uid,
+                                           context=ctx)
+                if binding.payment_status not in ('paid', 'authorized') and \
+                        binding.shipping_status == 'unpacked' and\
+                        binding.status != 'cancelled':
+                    export_state_change.delay(
+                        session,
+                        'nuvemshop.sale.order',
+                        binding.id,
+                        command='cancel',
+                        data=dict(reason='other')
+                    )
+                else:
+                    check = add_checkpoint(
+                        session=session,
+                        model_name='sale.order',
+                        record_id=binding.openerp_id.id,
+                        backend_id=binding.backend_id.id
+                    )
+        return
+
     def _after_import(self, binding):
         super(SaleOrderImporter, self)._after_import(binding)
+        self._check_to_cancel(binding)
         self._set_freight(binding)
         self._check_shipping_data(binding)
         binding.openerp_id.onchange_fiscal()
@@ -404,7 +490,6 @@ class SaleOrderImporter(NuvemshopImporter):
 @nuvemshop
 class SaleOrderLineImportMapper(ImportMapper):
     _model_name = 'nuvemshop.sale.order.line'
-
 
     direct = [
         ('name', 'name'),
@@ -422,7 +507,8 @@ class SaleOrderLineImportMapper(ImportMapper):
     @mapping
     def nuvemshop_order_id(self, record):
         if record.get('nuvemshop_order_id'):
-            nuvemshop_sale_order_binder = self.binder_for('nuvemshop.sale.order')
+            nuvemshop_sale_order_binder = self.binder_for(
+                'nuvemshop.sale.order')
             nuvemshop_order = nuvemshop_sale_order_binder.to_openerp(
                 record.get('nuvemshop_order_id')
             )
@@ -440,7 +526,8 @@ class SaleOrderLineImportMapper(ImportMapper):
     @mapping
     def product_id(self, record):
         if record.get('variant_id'):
-            product_product_binder = self.binder_for('nuvemshop.product.product')
+            product_product_binder = self.binder_for(
+                'nuvemshop.product.product')
             product_product = product_product_binder.to_openerp(
                 record.get('variant_id'), unwrap=True
             )
@@ -448,10 +535,12 @@ class SaleOrderLineImportMapper(ImportMapper):
                 return {'product_id': product_product.id}
             else:
                 raise RetryableJobError(
-                    'The product was not imported yet. The job will be retried later',
+                    'The product was not imported yet. '
+                    'The job will be retried later',
                     seconds=20,
                     ignore_retry=True
                 )
+
     @mapping
     def backend_id(self, record):
         return {'backend_id': self.backend_record.id}

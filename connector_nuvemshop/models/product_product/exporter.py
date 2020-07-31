@@ -2,21 +2,24 @@
 # Copyright (C) 2020  Gabriel Cardoso de Faria - KMEE
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-from ...unit.exporter import delay_export, export_record
 from openerp.addons.connector.event import on_record_create, on_record_write
-
+from openerp.addons.connector.queue.job import job
+from openerp.addons.connector.unit.synchronizer import ExportSynchronizer
 from openerp.addons.connector.unit.mapper import (
     mapping,
     ExportMapper
 )
 
+from ...backend import nuvemshop
+from ...connector import get_environment
+from ...unit.backend_adapter import GenericAdapter
 from ...unit.mapper import NuvemshopExportMapper
 from ...unit.exporter import (
     NuvemshopExporter,
-    delay_export_all_bindings
+    delay_export_all_bindings,
+    delay_export,
+    export_record
 )
-from ...backend import nuvemshop
-
 
 VARIANT_EXPORT_FIELDS = [
     'nuvemshop_image_id',
@@ -24,7 +27,6 @@ VARIANT_EXPORT_FIELDS = [
     'list_price',
     'promotional_price',
     'stock_management',
-    'stock',
     'weight',
     'width',
     'height',
@@ -34,6 +36,9 @@ VARIANT_EXPORT_FIELDS = [
     # 'name',
     'attribute_value_ids',
 ]
+
+# TODO: - Corrigir exportaçao de value (atributo da variante)
+#       - Sincronizaçao ao criar novo atributo ou nova variante no odoo
 
 
 @on_record_create(model_names='nuvemshop.product.product')
@@ -62,8 +67,12 @@ def nuvemshop_product_product_write(session, model_name, record_id, fields):
     record = model.browse(record_id)
     if not record.is_product_variant:
         return
-
-    if fields:
+    NO_UPDATE_FIELDS = [
+        'created_at',
+        'updated_at',
+        'stock',
+    ]
+    if fields and not any([field in fields for field in NO_UPDATE_FIELDS]):
         # If user modify any variant we delay template export but before
         # check if the template have a queued job
         template = record.mapped('main_template_id')
@@ -89,7 +98,7 @@ class ProductProductExporter(NuvemshopExporter):
     def _create(self, data):
         """ Create the Nuvemshop record """
         nuvemshop_record = self.backend_adapter.create(data)
-        return nuvemshop_record.get('id', 0)
+        return nuvemshop_record
 
     def _update(self, data):
         """ Update an Nuvemshop record """
@@ -141,3 +150,35 @@ class ProductProductExportMapper(NuvemshopExportMapper):
                     dict(pt=val.name) for val in record['attribute_value_ids']
                 ]
             }
+
+
+@nuvemshop
+class ProductInventoryExporter(ExportSynchronizer):
+    _model_name = ['nuvemshop.product.product']
+
+    def run(self, binding_id, fields):
+        """ Export the product inventory to Nuvemshop """
+        variant = self.env[self.model._name].browse(binding_id)
+        adapter = self.unit_for(GenericAdapter, 'nuvemshop.product.product')
+        binder = self.binder_for()
+        nuvemshop_id = binder.to_backend(variant.id)
+        template_id = variant.main_template_id.nuvemshop_id
+        adapter.export_quantity(template_id, nuvemshop_id, variant.stock)
+
+
+@job(default_channel='root.nuvemshop')
+def export_inventory(session, model_name, record_id, fields=None):
+    """ Export the inventory configuration and quantity of a product. """
+    product = session.env[model_name].browse(record_id)
+    backend_id = product.backend_id.id
+    env = get_environment(session, model_name, backend_id)
+    inventory_exporter = env.get_connector_unit(ProductInventoryExporter)
+    return inventory_exporter.run(record_id, fields)
+
+
+@job(default_channel='root.nuvemshop')
+def export_product_quantities(session, ids):
+    model_obj = session.env['nuvemshop.product.product']
+    model_obj.search([
+        ('backend_id', 'in', [ids]),
+    ]).recompute_nuvemshop_qty()

@@ -10,7 +10,6 @@
         <field name="model">wizard.nuvemshop.product.category</field>
         <field name="arch" type="xml">
             <form string="Wizard Nuvemshop Product Category">
-                <!-- TODO -->
                 <group>
                     <field name="backend_id"/>
                 </group>

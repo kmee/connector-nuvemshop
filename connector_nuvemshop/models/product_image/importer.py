@@ -78,7 +78,7 @@ class ProductImageImporter(NuvemshopImporter):
     _model_name = ['nuvemshop.product.image']
 
     def _get_nuvemshop_data(self):
-        """ Return the raw PrestaShop data for ``self.nuvemshop_id`` """
+        """ Return the raw Nuvemshop data for ``self.nuvemshop_id`` """
         return self.backend_adapter.read(dict(product_id=self.template_id,
                                               id=self.image_id))
 

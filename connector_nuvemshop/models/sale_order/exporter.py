@@ -6,10 +6,13 @@
 from openerp import _
 from openerp.addons.connector.event import on_record_create, on_record_write
 from openerp.addons.connector.queue.job import job
+from openerp.addons.connector.unit.mapper import ImportMapper
 
 from ...backend import nuvemshop
 from ...connector import get_environment
 from ...unit.exporter import NuvemshopExporter
+from ...unit.importer import NuvemshopImporter
+# from .importer import SaleOrderImportMapper
 
 ORDER_COMMAND_MAPPING = {
     'draft': 'open',
@@ -31,12 +34,14 @@ def sale_order_write(session, model_name, record_id, fields):
         model = session.env[model_name]
         record = model.browse(record_id)
         for binding in record.nuvemshop_bind_ids:
-            export_state_change.delay(
-                session,
-                'nuvemshop.sale.order',
-                binding.id,
-                command=ORDER_COMMAND_MAPPING[fields.get('state')]
-            )
+            if binding.status is not 'cancelled':
+                with session.change_context(connector_no_export=True):
+                    export_state_change.delay(
+                        session,
+                        'nuvemshop.sale.order',
+                        binding.id,
+                        command=ORDER_COMMAND_MAPPING[fields.get('state')]
+                    )
 
 
 @nuvemshop
@@ -44,7 +49,18 @@ class SaleStatusExporter(NuvemshopExporter):
     _model_name = ['nuvemshop.sale.order']
 
     def run(self, binding_id, command, data=None):
-        self.backend_adapter.sale_order_command(binding_id, command, data=data)
+        nuvemshop_record = self.backend_adapter.sale_order_command(
+            binding_id, command, data=data
+        )
+        if nuvemshop_record:
+            mapper = self.connector_env.get_connector_unit(ImportMapper)
+            importer = self.unit_for(NuvemshopImporter)
+            binding = self.binder.to_openerp(binding_id)
+            binding = binding.with_context(connector_no_export=True)
+            map_record = mapper.map_record(nuvemshop_record)
+            importer._update(binding, map_record.values())
+            if nuvemshop_record.get('status') == 'cancelled':
+                binding.canceled_in_backend = True
 
 
 @job(default_channel='root.nuvemshop')

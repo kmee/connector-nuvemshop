@@ -6,6 +6,8 @@ import logging
 from openerp import api, models, fields
 from ...unit.backend_adapter import GenericAdapter
 from ...backend import nuvemshop
+from openerp.addons.connector.session import ConnectorSession
+from ..product_product.exporter import export_inventory
 
 _logger = logging.getLogger(__name__)
 
@@ -27,6 +29,17 @@ class ProductProduct(models.Model):
                     image_record = bind.nuvemshop_image_id
                     image_record.product_variant_ids += record
 
+    @api.multi
+    def update_nuvemshop_qty(self):
+        for variant_binding in self.nuvemshop_variants_bind_ids:
+            variant_binding.recompute_nuvemshop_qty()
+
+    @api.multi
+    def update_nuvemshop_quantities(self):
+        for variant_binding in \
+                self.nuvemshop_variants_bind_ids:
+            variant_binding.recompute_nuvemshop_qty()
+        return True
 
 class NuvemshopProductProduct(models.Model):
     _name = 'nuvemshop.product.product'
@@ -61,7 +74,8 @@ class NuvemshopProductProduct(models.Model):
     )
 
     stock_management = fields.Boolean(
-        string="Stock Management"
+        string="Stock Management",
+        default=True
     )
 
     width = fields.Float(
@@ -80,9 +94,37 @@ class NuvemshopProductProduct(models.Model):
         string="Values"
     )
 
-    stock = fields.Char(
+    stock = fields.Float(
         string="Stock"
     )
+
+    @api.multi
+    def force_export_stock(self):
+        session = ConnectorSession.from_env(self.env)
+        for binding in self.nuvemshop_variants_bind_ids:
+            export_inventory.delay(
+                session,
+                'nuvemshop.product.product',
+                binding.id,
+                fields=['stock'],
+                priority=20
+            )
+
+    def _nuvemshop_qty(self):
+        locations = self.backend_id.get_stock_locations()
+        qty_available = self.with_context(location=locations.ids).qty_available
+        return qty_available - self.outgoing_qty
+
+    @api.multi
+    def recompute_nuvemshop_qty(self):
+        for product_binding in self:
+            locations = product_binding.backend_id.get_stock_locations()
+            qty_available = product_binding.with_context(
+                location=locations.ids).qty_available
+            qty = qty_available - product_binding.outgoing_qty # - 3 # Security Quantity???
+            if product_binding.stock != qty:
+                product_binding.stock = qty if qty >= 0.0 else 0.0
+        return True
 
     @api.onchange('name')
     def _onchange_name(self):
@@ -94,6 +136,11 @@ class NuvemshopProductProduct(models.Model):
 class ProductProductAdapter(GenericAdapter):
     _model_name = 'nuvemshop.product.product'
     _nuvemshop_model = 'products'
+
+    def export_quantity(self, template_id, nuvemshop_id, quantity):
+        # TODO: verificar estoque no nuvemshop antes de exportar
+        # caso o numero esteja diferente, importar ordens antes
+        self.write(nuvemshop_id, dict(product_id=template_id, stock=quantity))
 
     def search(self, filters):
         if filters.get('product_id'):

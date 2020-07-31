@@ -37,6 +37,15 @@
                     <field name="values"/>
                     <field name="created_at"/>
                     <field name="updated_at"/>
+                    <field name="stock"/>
+                    <button name="recompute_nuvemshop_qty"
+                            class="oe_highlight"
+                            type="object"
+                            string="Recompute quantity"/>
+                    <button name="force_export_stock"
+                            class="oe_highlight"
+                            type="object"
+                            string="Export All Stock"/>
                 </group>
             </form>
         </field>

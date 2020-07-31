@@ -2,11 +2,12 @@
 # Copyright (C) 2020  Luis Felipe Mileo - KMEE
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
+import pytz
 from openerp import models, api, fields, _
 from openerp.exceptions import Warning
 from openerp.addons.connector.session import ConnectorSession
 from datetime import datetime
-
+from .product_product.exporter import export_product_quantities
 from tiendanube.client import NubeClient
 
 from ..unit.importer import import_batch_delayed
@@ -89,17 +90,30 @@ class NuvemShopBackend(models.Model):
         except Exception as e:
             raise Warning(_('Error!!! \n {}'.format(e.message)))
 
+    def _from_date_with_tz(self, import_since):
+        if import_since:
+            timezone = pytz.timezone(self.env.user.tz)
+            from_date = fields.Datetime.from_string(import_since)
+            from_date_tz = timezone.localize(from_date)
+            from_date_dt = from_date_tz.replace(microsecond=0).isoformat()
+            return str(from_date_dt)
+        return None
+
     @api.multi
     def import_category(self):
         session = ConnectorSession(self.env.cr, self.env.uid,
                                    context=self.env.context)
-        import_start_time = datetime.now()
         backend_id = self.id
-        from_date = None
+        updated_at_min = self._from_date_with_tz(self.import_categories_since)
+        import_start_time = datetime.now()
+        self.import_categories_since = import_start_time
         import_batch_delayed.delay(
-            session, 'nuvemshop.product.category', backend_id,
-            {'updated_at_min': from_date,
-             'updated_at_max': import_start_time}, priority=1)
+            session,
+            'nuvemshop.product.category',
+            backend_id,
+            {'updated_at_min': updated_at_min},
+            priority=1
+        )
         return True
 
     @api.multi
@@ -113,14 +127,27 @@ class NuvemShopBackend(models.Model):
     def import_partner(self):
         session = ConnectorSession(self.env.cr, self.env.uid,
                                    context=self.env.context)
-        import_start_time = datetime.now()
         backend_id = self.id
-        from_date = self.import_partners_since
-        self.import_partners_since = import_start_time
-        import_batch_delayed.delay(
-            session, 'nuvemshop.res.partner', backend_id,
-            {'updated_at_min': from_date,
-             'updated_at_max': import_start_time}, priority=1)
+        updated_at_min = self._from_date_with_tz(self.import_partners_since)
+
+        func = "openerp.addons.connector_nuvemshop.unit.importer." \
+               "import_batch_delayed('nuvemshop.res.partner'"
+
+        jobs = session.env['queue.job'].sudo().search(
+            [('func_string', 'like', "%s%%" % func),
+             ('state', '!=', 'done')]
+        )
+        if not jobs:
+            import_start_time = datetime.now()
+            self.import_partners_since = import_start_time
+
+            import_batch_delayed.delay(
+                session,
+                'nuvemshop.res.partner',
+                backend_id,
+                {'updated_at_min': updated_at_min},
+                priority=1
+            )
         return True
 
     @api.multi
@@ -134,15 +161,29 @@ class NuvemShopBackend(models.Model):
     def import_order(self):
         session = ConnectorSession(self.env.cr, self.env.uid,
                                    context=self.env.context)
-        import_start_time = datetime.now()
         backend_id = self.id
-        from_date = self.import_orders_since
-        self.import_orders_since = import_start_time
-        import_batch_delayed.delay(
-            session, 'nuvemshop.sale.order', backend_id,
-            {'updated_at_min': from_date,
-             'updated_at_max': import_start_time}, priority=1)
-        return True
+
+        filter_data = {}
+
+        updated_at_min = self._from_date_with_tz(self.import_orders_since)
+        filter_data.update({'updated_at_min': updated_at_min})
+
+        func = "openerp.addons.connector_nuvemshop.unit.importer." \
+           "import_batch_delayed('nuvemshop.sale.order'"
+
+        jobs = session.env['queue.job'].sudo().search(
+            [('func_string', 'like', "%s%%" % func),
+             ('state', '!=', 'done')]
+        )
+        if not jobs:
+            self.import_orders_since = datetime.now()
+            import_batch_delayed.delay(
+                session,
+                'nuvemshop.sale.order',
+                backend_id,
+                filter_data,
+                priority=1
+            )
 
     @api.multi
     def import_orders(self):
@@ -155,14 +196,17 @@ class NuvemShopBackend(models.Model):
     def import_template(self):
         session = ConnectorSession(self.env.cr, self.env.uid,
                                    context=self.env.context)
-        import_start_time = datetime.now()
         backend_id = self.id
-        from_date = self.import_templates_since
+        updated_at_min = self._from_date_with_tz(self.import_templates_since)
+        import_start_time = datetime.now()
         self.import_templates_since = import_start_time
         import_batch_delayed.delay(
-            session, 'nuvemshop.product.template', backend_id,
-            {'updated_at_min': from_date,
-             'updated_at_max': import_start_time}, priority=1)
+            session,
+            'nuvemshop.product.template',
+            backend_id,
+            {'updated_at_min': updated_at_min},
+            priority=1
+        )
         return True
 
     @api.multi
@@ -176,14 +220,17 @@ class NuvemShopBackend(models.Model):
     def import_image(self):
         session = ConnectorSession(self.env.cr, self.env.uid,
                                    context=self.env.context)
-        import_start_time = datetime.now()
         backend_id = self.id
-        from_date = self.import_images_since
+        updated_at_min = self._from_date_with_tz(self.import_images_since)
+        import_start_time = datetime.now()
         self.import_images_since = import_start_time
         import_batch_delayed.delay(
-            session, 'nuvemshop.product.image', backend_id,
-            {'updated_at_min': from_date,
-             'updated_at_max': import_start_time}, priority=1)
+            session,
+            'nuvemshop.product.image',
+            backend_id,
+            {'updated_at_min': updated_at_min},
+            priority=1
+        )
         return True
 
     @api.multi
@@ -196,3 +243,28 @@ class NuvemShopBackend(models.Model):
             for product_id in products:
                 backend.import_image(product_id)
         return True
+
+    @api.multi
+    def get_stock_locations(self):
+        self.ensure_one()
+        locations = self.env['stock.location'].search([
+            ('id', 'child_of', self.stock_location_id.id or
+             self.warehouse_id.lot_stock_id.id),
+            ('nuvemshop_synchronized', '=', True),
+            ('usage', '=', 'internal'),
+        ])
+        return locations
+
+    @api.multi
+    def update_product_stock_qty(self):
+        session = ConnectorSession(
+            self.env.cr, self.env.uid, context=self.env.context)
+        for backend_record in self:
+            export_product_quantities.delay(session, backend_record.id)
+        return True
+
+    @api.model
+    def _scheduler_import_sale_orders(self, domain=None):
+        backend = self.search(domain or [])
+        backend.import_partners()
+        backend.import_orders()

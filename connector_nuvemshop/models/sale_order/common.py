@@ -23,7 +23,8 @@ class SaleOrder(models.Model):
     )
 
     @api.one
-    @api.depends('nuvemshop_bind_ids', 'nuvemshop_bind_ids.nuvemshop_parent_id')
+    @api.depends('nuvemshop_bind_ids',
+                 'nuvemshop_bind_ids.nuvemshop_parent_id')
     def get_parent_id(self):
         """ Return the parent order.
 
@@ -132,7 +133,7 @@ class NuvemshopSaleOrder(models.Model):
         selection=[
             ('open', 'Open'),
             ('closed', 'Closed'),
-            ('canceled', 'Canceled'),
+            ('cancelled', 'Cancelled'),
         ]
     )
     payment_status = fields.Selection(
@@ -204,6 +205,7 @@ class NuvemshopSaleOrderLine(models.Model):
     nuvemshop_order_id = fields.Many2one(
         comodel_name='nuvemshop.sale.order',
         string='Nuvemshop Order',
+        ondelete='cascade',
     )
 
     @api.model

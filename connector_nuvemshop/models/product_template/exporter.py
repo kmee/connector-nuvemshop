@@ -4,21 +4,17 @@
 
 from datetime import timedelta
 
-from ...unit.backend_adapter import GenericAdapter
-
-from ...unit.exporter import delay_export, delay_export_all_bindings, export_record
-
 from openerp.addons.connector.event import on_record_create, on_record_write
+from openerp.addons.connector.unit.mapper import mapping, ExportMapper
 
-from openerp.addons.connector.unit.mapper import (
-    mapping,
-    ExportMapper,
-)
-from ..product_product.exporter import ProductProductExportMapper
 from ...unit.mapper import TranslationNuvemshopExportMapper
-from ...unit.exporter import TranslationNuvemshopExporter
+from ...unit.exporter import (
+    TranslationNuvemshopExporter,
+    delay_export,
+    export_record,
+    _date_to_odoo
+)
 from ...backend import nuvemshop
-from ...connector import get_environment
 
 
 TEMPLATE_EXPORT_FIELDS = [
@@ -32,7 +28,7 @@ TEMPLATE_EXPORT_FIELDS = [
     'seo_title',
     'seo_description',
     'brand',
-    'attribute_line_ids',
+    # 'attribute_line_ids',
     # 'created_at',
     # 'updated_at',
     'product_variant_ids',
@@ -54,6 +50,8 @@ TEMPLATE_EXPORT_FIELDS = [
     'ean13',
     # 'name',
 ]
+
+# TODO: Exportar atributos de variante corretamente
 
 
 @on_record_create(model_names='nuvemshop.product.template')
@@ -102,17 +100,31 @@ class ProductTemplateExporter(TranslationNuvemshopExporter):
         nuvemshop_record = self.backend_adapter.create(data)
         nuvemshop_variant_obj = self.env['nuvemshop.product.product']
 
-        nuvemshop_variant_obj.with_context(connector_no_export=True).create({
-            'backend_id': self.backend_record.id,
-            'openerp_id': self.erp_record.product_variant_ids[0].id,
-            'nuvemshop_id': nuvemshop_record.get('variants')[0].get('id'),
-            'main_template_id': self.erp_record.id,
-        })
+        if len(nuvemshop_record.get('variants')) == 1:
+            nuvemshop_variant_obj.with_context(
+                connector_no_export=True
+            ).create({
+                'backend_id': self.backend_record.id,
+                'openerp_id': self.erp_record.product_variant_ids[0].id,
+                'nuvemshop_id': nuvemshop_record.get('variants')[0].get('id'),
+                'main_template_id': self.erp_record.id,
+                'created_at': _date_to_odoo(
+                    nuvemshop_record.get('variants')[0].get('created_at')),
+                'updated_at': _date_to_odoo(
+                    nuvemshop_record.get('variants')[0].get('updated_at')),
+            })
+        else:
+            for variant in nuvemshop_record.get('variants'):
+                for value in variant.get('values'):
+                    self.env['product.attribute.values'].search([
+                        ('name', '=', value.get('pt'))
+                    ])
 
-        return nuvemshop_record.get('id', 0)
+        return nuvemshop_record
 
     def _update(self, data):
         """ Update an Nuvemshop record """
+        # TODO: Sincronizar variantes corretamente
         assert self.nuvemshop_id
         return self.backend_adapter.write(self.nuvemshop_id, data)
 
@@ -123,7 +135,9 @@ class ProductTemplateExporter(TranslationNuvemshopExporter):
     def export_images(self):
         image_obj = self.session.env['nuvemshop.product.image']
 
-        for index, image in enumerate(self.erp_record.image_ids):
+        for index, image in enumerate(self.erp_record.image_ids.filtered(
+            lambda img: img.storage == 'url'
+        )):
             image_ext_id = image_obj.search([
                 ('backend_id', '=', self.backend_record.id),
                 ('openerp_id', '=', image.id),
@@ -161,7 +175,7 @@ class ProductTemplateExporter(TranslationNuvemshopExporter):
                 self.session,
                 'nuvemshop.product.product',
                 variant_ext_id.id, priority=70,
-                eta=timedelta(seconds=10 + (index * 2))
+                eta=timedelta(seconds=5 + (index * 2))
             )
 
 
@@ -182,7 +196,7 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
         # ('tags', 'tags'),
         # ('images', 'images'),
         # ('categories', 'categories'),
-        #TODO campo tags
+        # TODO campo tags
     ]
 
     @mapping
@@ -191,13 +205,9 @@ class ProductTemplateExportMapper(TranslationNuvemshopExportMapper):
         if record.attribute_line_ids:
             for attribute in record.attribute_line_ids:
                 attributes.append(
-                    {
-                        "pt": attribute.display_name
-                    }
+                    {"pt": attribute.display_name}
                 )
-            return {
-                'attributes': attributes
-            }
+            return {'attributes': attributes}
 
     @mapping
     def description(self, record):

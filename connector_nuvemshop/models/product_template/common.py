@@ -9,6 +9,8 @@ from openerp.addons.connector.session import ConnectorSession
 from ...backend import nuvemshop
 from ...unit.importer import import_batch_delayed
 
+
+
 _logger = logging.getLogger(__name__)
 
 
@@ -52,6 +54,17 @@ class ProductTemplate(models.Model):
                 )
 
 
+    @api.multi
+    def update_nuvemshop_quantities(self):
+        for template in self:
+            # Recompute product template Nuvemshop qty
+            template.mapped('nuvemshop_bind_ids').recompute_nuvemshop_qty()
+            # Recompute variant Nuvemshop qty
+            template.mapped(
+                'product_variant_ids.nuvemshop_variants_bind_ids'
+            ).recompute_nuvemshop_qty()
+        return True
+
 class NuvemshopProductTemplate(models.Model):
     _name = 'nuvemshop.product.template'
     _inherit = ['nuvemshop.binding', 'nuvemshop.handle.abstract']
@@ -93,6 +106,16 @@ class NuvemshopProductTemplate(models.Model):
         if self.name:
             self.handle = self._handle_name(self.name)
 
+    @api.multi
+    def recompute_nuvemshop_qty(self):
+        for product_binding in self:
+            for variant in product_binding.mapped(
+                'product_variant_ids.nuvemshop_variants_bind_ids'):
+                new_qty = variant._nuvemshop_qty()
+                if variant.stock != new_qty:
+                    variant.stock = new_qty if new_qty >= 0.0 else 0.0
+                variant.recompute_nuvemshop_qty()
+        return True
 
 @nuvemshop
 class TemplateAdapter(GenericAdapter):

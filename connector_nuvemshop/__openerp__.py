@@ -20,15 +20,14 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'data/crons.xml',
 
         'wizards/wizard_nuvemshop_product_category.xml',
         'wizards/wizard_nuvemshop_product_template.xml',
         'wizards/wizard_nuvemshop_product_image.xml',
         'wizards/active_deactive_products_view.xml',
 
-
         "views/menus_view.xml",
-
         'views/res_partner_view.xml',
         "views/backend_view.xml",
         "views/image_view.xml",

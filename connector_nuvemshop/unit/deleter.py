@@ -11,7 +11,9 @@ class NuvemshopDeleter(Deleter):
     """ Base deleter for Nuvemshop """
 
     _model_name = [
-        'nuvemshop.product.category'
+        'nuvemshop.product.category',
+        'nuvemshop.product.product'
+        'nuvemshop.product.template'
     ]
 
     def run(self, external_id):
@@ -21,7 +23,7 @@ class NuvemshopDeleter(Deleter):
         """
         self.backend_adapter.delete(external_id)
         return _('Record %s deleted on Nuvemshop on resource %s') % (
-            external_id)
+            external_id, self._model_name)
 
 
 @job(default_channel='root.nuvemshop')
