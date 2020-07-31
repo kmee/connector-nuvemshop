@@ -133,15 +133,16 @@ class SaleImportRule(ConnectorUnit):
 
         if not payment_method:
             _logger.info("NUVEMSHOP: sale.order.check.raise.FailedJob")
-            raise FailedJobError(
-                "The configuration is missing for the Payment Method '%s'.\n\n"
-                "Resolution:\n"
-                "- Go to "
-                "'Sales > Configuration > Sales > Customer Payment Method\n"
-                "- Create a new Payment Method with name '%s'\n"
-                "-Eventually  link the Payment Method to an existing Workflow "
-                "Process or create a new one." % (payment_method,
-                                                  payment_method))
+            raise Exception
+                #     (
+                # "The configuration is missing for the Payment Method '%s'.\n\n"
+                # "Resolution:\n"
+                # "- Go to "
+                # "'Sales > Configuration > Sales > Customer Payment Method\n"
+                # "- Create a new Payment Method with name '%s'\n"
+                # "-Eventually  link the Payment Method to an existing Workflow "
+                # "Process or create a new one." % (payment_method,
+                #                                   payment_method))
         # self._rule_global(record, payment_method)
         self._rules[payment_method.import_rule](self, record, payment_method)
         _logger.info("NUVEMSHOP: sale.order.check.compleate")
