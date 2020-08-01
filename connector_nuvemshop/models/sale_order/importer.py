@@ -439,7 +439,7 @@ class SaleOrderImporter(NuvemshopImporter):
                 self.session,
                 'sale.order',
                 binding.openerp_id,
-                self.backend_id.id
+                binding.backend_id.id
             )
 
     def _check_to_cancel(self, binding):
