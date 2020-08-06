@@ -110,9 +110,8 @@ class SaleImportRule(ConnectorUnit):
         :rtype: boolean
         """
         payment_method = False
-        if record.get('gateway') and \
-                record.get('payment_details').get('method'):
-            method = record['payment_details'].get('method')
+        if record.get('gateway'):
+            method = record.get('payment_details').get('method')
             method_name = record['gateway']
             if method:
                 method_name = method_name + '(' + method + ')'
@@ -132,8 +131,13 @@ class SaleImportRule(ConnectorUnit):
                 "'Sales > Configuration > Sales > Customer Payment Method\n"
                 "- Create a new Payment Method with name '%s'\n"
                 "-Eventually  link the Payment Method to an existing Workflow "
-                "Process or create a new one." % (payment_method,
-                                                  payment_method))
+                "Process or create a new one." % (method_name,
+                                                  method_name))
+        if len(payment_method) > 1:
+            raise FailedJobError(
+                "Found more than 1 payment method, maybe a misconfiguration?"
+                "Try creating a method with name %s" %(method_name)
+            )
         # self._rule_global(record, payment_method)
         self._rules[payment_method.import_rule](self, record, payment_method)
 

@@ -31,7 +31,7 @@ class ProductProduct(models.Model):
 
     @api.multi
     def update_nuvemshop_qty(self):
-        for variant_binding in self.nuvemshop_variants_bind_ids:
+        for variant_binding in self.mapped('nuvemshop_variants_bind_ids'):
             variant_binding.recompute_nuvemshop_qty()
 
     @api.multi
